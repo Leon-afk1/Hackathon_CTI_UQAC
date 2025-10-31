@@ -1,2 +1,2 @@
 # Neuils-de-UTBM
-https://catalog.us-east-1.prod.workshops.aws/join?access-code=2d3b-15f27f-b2
+https://catalog.us-east-1.prod.workshops.aws/join?access-code=f3da-1853ed-21
