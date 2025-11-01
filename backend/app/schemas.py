@@ -1,13 +1,14 @@
 # schemas.py
 from pydantic import BaseModel, ConfigDict
 from typing import Optional
+from datetime import datetime
 
 # ============ EVENT SCHEMAS ============
 class EventBase(BaseModel):
     declared_by_id: int
     description: str
-    start_datetime: str
-    end_datetime: Optional[str] = None
+    start_datetime: datetime
+    end_datetime: Optional[datetime] = None
     organizational_unit_id: int
     type: str
     classification: str
@@ -18,8 +19,8 @@ class EventCreate(EventBase):
 class EventUpdate(BaseModel):
     declared_by_id: Optional[int] = None
     description: Optional[str] = None
-    start_datetime: Optional[str] = None
-    end_datetime: Optional[str] = None
+    start_datetime: Optional[datetime] = None
+    end_datetime: Optional[datetime] = None
     organizational_unit_id: Optional[int] = None
     type: Optional[str] = None
     classification: Optional[str] = None
@@ -74,7 +75,7 @@ class CorrectiveMeasureBase(BaseModel):
     name: str
     description: str
     owner_id: int
-    implementation_date: str
+    implementation_date: datetime
     cost: Optional[float] = None
     organizational_unit_id: int
 
@@ -85,7 +86,7 @@ class CorrectiveMeasureUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     owner_id: Optional[int] = None
-    implementation_date: Optional[str] = None
+    implementation_date: Optional[datetime] = None
     cost: Optional[float] = None
     organizational_unit_id: Optional[int] = None
 
