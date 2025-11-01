@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 from data_retriever import data_retriever
+from memory_utils import prepare_context_for_sql
 
 # Configuration de la page Streamlit
 st.set_page_config(
@@ -108,6 +109,7 @@ with st.sidebar:
     
     if st.button("🔄 Réinitialiser"):
         st.session_state.messages = []
+        st.session_state.conversation_history = []  # Nettoyer aussi la mémoire
         st.rerun()
 
 # Initialisation de l'historique des messages et de la conversation
@@ -160,11 +162,22 @@ if prompt := st.chat_input("Posez votre question sur les événements, risques o
                     st.caption(f"{i}. Q: {ex.get('question', 'N/A')[:60]}...")
         
         with st.spinner("🔍 Analyse de la question et génération de la requête SQL..."):
+            # Préparer le contexte (synthèse si trop long, vide si question non liée)
+            prepared_history = prepare_context_for_sql(
+                st.session_state.conversation_history[-5:],
+                prompt
+            )
+            
+            # Afficher si la mémoire est utilisée ou non
+            if not prepared_history and history_size > 0:
+                st.info("💡 Question indépendante détectée - Mémoire non utilisée")
+            elif len(prepared_history) < len(st.session_state.conversation_history[-5:]):
+                st.info(f"🔄 Historique synthétisé: {len(st.session_state.conversation_history[-5:])} → {len(prepared_history)} échanges")
+            
             # Récupération du contexte depuis la base de données avec SQL intelligent
-            # On passe les 5 derniers échanges comme historique
             search_result = data_retriever.search_relevant_data(
                 prompt, 
-                st.session_state.conversation_history[-5:]  # Garde seulement les 5 derniers
+                prepared_history
             )
             schema = data_retriever.get_database_schema()
             
