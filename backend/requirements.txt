@@ -1,0 +1,11 @@
+# Framework web
+flask
+
+# Connecteur PostgreSQL
+psycopg2-binary
+fastapi 
+uvicorn 
+sqlalchemy 
+
+# Pour la gestion des variables d'environnement
+python-dotenv

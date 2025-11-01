@@ -1,0 +1,32 @@
+# Fichier : docker-compose.yml
+
+services:
+  backend:
+    build: ./backend
+    container_name: rag_backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/app:/app
+    environment:
+      - POSTGRES_USER=monuser
+      - POSTGRES_PASSWORD=monpassword
+      - POSTGRES_DB=madb
+    depends_on:
+      - db
+
+  db:
+    image: postgres:18-alpine # <-- LA VERSION QUE TU AS TROUVÉE !
+    container_name: rag_db
+    environment:
+      - POSTGRES_USER=monuser
+      - POSTGRES_PASSWORD=monpassword
+      - POSTGRES_DB=madb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db_backup:/docker-entrypoint-initdb.d
+
+volumes:
+  postgres_data:
