@@ -1,5 +1,7 @@
 # Framework web
 flask
+streamlit
+pandas
 
 # Connecteur PostgreSQL
 psycopg2-binary
