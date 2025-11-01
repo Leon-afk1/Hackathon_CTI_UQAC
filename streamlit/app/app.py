@@ -110,7 +110,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # URL de base de l'API
-BASE_URL = "http://backend:8000"
+BASE_URL = "http://api:8000"
 
 res = requests.get(f"{BASE_URL}/")
 if res.status_code != 200:
