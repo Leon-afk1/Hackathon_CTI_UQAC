@@ -602,89 +602,195 @@ try:
                 try:
                     df_plot = df_custom.copy()
                     
+                    # Vérifications de sécurité générales
+                    if len(df_plot) == 0:
+                        st.error("⚠️ Aucune donnée disponible pour créer le graphique.")
+                        st.stop()
+                    
                     # Créer le graphique selon le type
                     if chart_type == "Bar Chart":
                         if not x_axis or not y_axis:
                             st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un graphique en barres.")
                         else:
-                            if aggregation != "Aucune" and x_axis and y_axis:
-                                if aggregation == "Somme":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
-                                elif aggregation == "Moyenne":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
-                                elif aggregation == "Compte":
-                                    df_plot = df_plot.groupby(x_axis).size().reset_index(name=y_axis)
-                                elif aggregation == "Min":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].min().reset_index()
-                                elif aggregation == "Max":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].max().reset_index()
-                            
-                            fig = px.bar(df_plot, x=x_axis, y=y_axis, color=color_column, 
-                                        title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                            # Vérifier que les colonnes existent
+                            if x_axis not in df_plot.columns or y_axis not in df_plot.columns:
+                                st.error("⚠️ Une ou plusieurs colonnes sélectionnées n'existent pas dans les données.")
+                            # Vérifier qu'il y a des données non-nulles
+                            elif df_plot[x_axis].isna().all() or df_plot[y_axis].isna().all():
+                                st.error("⚠️ Les colonnes sélectionnées ne contiennent que des valeurs nulles.")
+                            # Pour les agrégations, vérifier que Y est numérique (sauf pour Compte)
+                            elif aggregation in ["Somme", "Moyenne", "Min", "Max"] and df_plot[y_axis].dtype not in ['int64', 'float64']:
+                                st.error(f"⚠️ L'agrégation '{aggregation}' nécessite une colonne numérique pour l'axe Y. La colonne '{y_axis}' n'est pas numérique.")
+                            else:
+                                if aggregation != "Aucune" and x_axis and y_axis:
+                                    if aggregation == "Somme":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
+                                    elif aggregation == "Moyenne":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
+                                    elif aggregation == "Compte":
+                                        df_plot = df_plot.groupby(x_axis).size().reset_index(name=y_axis)
+                                    elif aggregation == "Min":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].min().reset_index()
+                                    elif aggregation == "Max":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].max().reset_index()
+                                
+                                # Vérifier qu'il reste des données après agrégation
+                                if len(df_plot) == 0:
+                                    st.error("⚠️ Aucune donnée disponible après agrégation.")
+                                else:
+                                    fig = px.bar(df_plot, x=x_axis, y=y_axis, color=color_column, 
+                                                title=chart_title, height=chart_height)
+                                    st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Line Chart":
                         if not x_axis or not y_axis:
                             st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un graphique linéaire.")
                         else:
-                            if aggregation != "Aucune" and x_axis and y_axis:
-                                if aggregation == "Somme":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
-                                elif aggregation == "Moyenne":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
-                                elif aggregation == "Compte":
-                                    df_plot = df_plot.groupby(x_axis).size().reset_index(name=y_axis)
-                            
-                            fig = px.line(df_plot, x=x_axis, y=y_axis, color=color_column,
-                                         title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                            # Vérifications de sécurité
+                            if x_axis not in df_plot.columns or y_axis not in df_plot.columns:
+                                st.error("⚠️ Une ou plusieurs colonnes sélectionnées n'existent pas dans les données.")
+                            elif df_plot[x_axis].isna().all() or df_plot[y_axis].isna().all():
+                                st.error("⚠️ Les colonnes sélectionnées ne contiennent que des valeurs nulles.")
+                            elif aggregation in ["Somme", "Moyenne", "Min", "Max"] and df_plot[y_axis].dtype not in ['int64', 'float64']:
+                                st.error(f"⚠️ L'agrégation '{aggregation}' nécessite une colonne numérique pour l'axe Y.")
+                            else:
+                                if aggregation != "Aucune" and x_axis and y_axis:
+                                    if aggregation == "Somme":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
+                                    elif aggregation == "Moyenne":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
+                                    elif aggregation == "Compte":
+                                        df_plot = df_plot.groupby(x_axis).size().reset_index(name=y_axis)
+                                
+                                if len(df_plot) == 0:
+                                    st.error("⚠️ Aucune donnée disponible après agrégation.")
+                                else:
+                                    fig = px.line(df_plot, x=x_axis, y=y_axis, color=color_column,
+                                                 title=chart_title, height=chart_height)
+                                    st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Scatter Plot":
                         if not x_axis or not y_axis:
                             st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un nuage de points.")
                         else:
-                            fig = px.scatter(df_plot, x=x_axis, y=y_axis, color=color_column,
-                                           size=size_column, title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                            # Vérifications de sécurité
+                            if x_axis not in df_plot.columns or y_axis not in df_plot.columns:
+                                st.error("⚠️ Une ou plusieurs colonnes sélectionnées n'existent pas dans les données.")
+                            elif df_plot[x_axis].isna().all() or df_plot[y_axis].isna().all():
+                                st.error("⚠️ Les colonnes sélectionnées ne contiennent que des valeurs nulles.")
+                            # Vérifier que les deux axes sont numériques pour un scatter plot
+                            elif df_plot[x_axis].dtype not in ['int64', 'float64'] or df_plot[y_axis].dtype not in ['int64', 'float64']:
+                                st.error("⚠️ Les scatter plots nécessitent des colonnes numériques pour les axes X et Y.")
+                            # Vérifier la colonne de taille si spécifiée
+                            elif size_column and size_column not in df_plot.columns:
+                                st.error(f"⚠️ La colonne de taille '{size_column}' n'existe pas.")
+                            elif size_column and df_plot[size_column].dtype not in ['int64', 'float64']:
+                                st.error(f"⚠️ La colonne de taille '{size_column}' doit être numérique.")
+                            else:
+                                fig = px.scatter(df_plot, x=x_axis, y=y_axis, color=color_column,
+                                               size=size_column, title=chart_title, height=chart_height)
+                                st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Pie Chart":
                         if not names_column:
                             st.error("⚠️ Veuillez sélectionner une colonne pour les catégories.")
                         else:
-                            if values_column:
-                                fig = px.pie(df_plot, names=names_column, values=values_column,
-                                           title=chart_title, height=chart_height)
+                            # Vérifications de sécurité
+                            if names_column not in df_plot.columns:
+                                st.error(f"⚠️ La colonne '{names_column}' n'existe pas dans les données.")
+                            elif df_plot[names_column].isna().all():
+                                st.error("⚠️ La colonne des catégories ne contient que des valeurs nulles.")
+                            elif values_column and values_column not in df_plot.columns:
+                                st.error(f"⚠️ La colonne de valeurs '{values_column}' n'existe pas.")
+                            elif values_column and df_plot[values_column].dtype not in ['int64', 'float64']:
+                                st.error(f"⚠️ La colonne de valeurs '{values_column}' doit être numérique.")
                             else:
-                                # Compter les occurrences
-                                df_counts = df_plot[names_column].value_counts().reset_index()
-                                df_counts.columns = [names_column, 'count']
-                                fig = px.pie(df_counts, names=names_column, values='count',
-                                           title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                                if values_column:
+                                    # Filtrer les valeurs nulles
+                                    df_plot_clean = df_plot[[names_column, values_column]].dropna()
+                                    if len(df_plot_clean) == 0:
+                                        st.error("⚠️ Aucune donnée valide après suppression des valeurs nulles.")
+                                    else:
+                                        fig = px.pie(df_plot_clean, names=names_column, values=values_column,
+                                                   title=chart_title, height=chart_height)
+                                        st.plotly_chart(fig, use_container_width=True)
+                                else:
+                                    # Compter les occurrences
+                                    df_counts = df_plot[names_column].value_counts().reset_index()
+                                    df_counts.columns = [names_column, 'count']
+                                    if len(df_counts) == 0:
+                                        st.error("⚠️ Aucune donnée à afficher.")
+                                    else:
+                                        fig = px.pie(df_counts, names=names_column, values='count',
+                                                   title=chart_title, height=chart_height)
+                                        st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Histogram":
                         if not y_axis:
                             st.error("⚠️ Veuillez sélectionner une valeur à analyser pour créer un histogramme.")
                         else:
-                            fig = px.histogram(df_plot, x=y_axis, color=color_column,
-                                             title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                            # Vérifications de sécurité
+                            if y_axis not in df_plot.columns:
+                                st.error(f"⚠️ La colonne '{y_axis}' n'existe pas dans les données.")
+                            elif df_plot[y_axis].isna().all():
+                                st.error("⚠️ La colonne sélectionnée ne contient que des valeurs nulles.")
+                            elif df_plot[y_axis].dtype not in ['int64', 'float64']:
+                                st.error("⚠️ Les histogrammes nécessitent une colonne numérique.")
+                            else:
+                                # Filtrer les valeurs nulles
+                                df_plot_clean = df_plot[df_plot[y_axis].notna()]
+                                if len(df_plot_clean) == 0:
+                                    st.error("⚠️ Aucune donnée valide après suppression des valeurs nulles.")
+                                else:
+                                    fig = px.histogram(df_plot_clean, x=y_axis, color=color_column,
+                                                     title=chart_title, height=chart_height)
+                                    st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Box Plot":
                         if not y_axis:
                             st.error("⚠️ Veuillez sélectionner au moins l'axe Y pour créer un box plot.")
                         else:
-                            fig = px.box(df_plot, x=x_axis, y=y_axis, color=color_column,
-                                        title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                            # Vérifications de sécurité
+                            if y_axis not in df_plot.columns:
+                                st.error(f"⚠️ La colonne '{y_axis}' n'existe pas dans les données.")
+                            elif x_axis and x_axis not in df_plot.columns:
+                                st.error(f"⚠️ La colonne '{x_axis}' n'existe pas dans les données.")
+                            elif df_plot[y_axis].isna().all():
+                                st.error("⚠️ La colonne Y ne contient que des valeurs nulles.")
+                            elif df_plot[y_axis].dtype not in ['int64', 'float64']:
+                                st.error("⚠️ Les box plots nécessitent une colonne numérique pour l'axe Y.")
+                            else:
+                                # Filtrer les valeurs nulles pour Y
+                                df_plot_clean = df_plot[df_plot[y_axis].notna()]
+                                if len(df_plot_clean) == 0:
+                                    st.error("⚠️ Aucune donnée valide après suppression des valeurs nulles.")
+                                else:
+                                    fig = px.box(df_plot_clean, x=x_axis, y=y_axis, color=color_column,
+                                                title=chart_title, height=chart_height)
+                                    st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Violin Plot":
                         if not y_axis:
                             st.error("⚠️ Veuillez sélectionner au moins l'axe Y pour créer un violin plot.")
                         else:
-                            fig = px.violin(df_plot, x=x_axis, y=y_axis, color=color_column,
-                                          title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                            # Vérifications de sécurité
+                            if y_axis not in df_plot.columns:
+                                st.error(f"⚠️ La colonne '{y_axis}' n'existe pas dans les données.")
+                            elif x_axis and x_axis not in df_plot.columns:
+                                st.error(f"⚠️ La colonne '{x_axis}' n'existe pas dans les données.")
+                            elif df_plot[y_axis].isna().all():
+                                st.error("⚠️ La colonne Y ne contient que des valeurs nulles.")
+                            elif df_plot[y_axis].dtype not in ['int64', 'float64']:
+                                st.error("⚠️ Les violin plots nécessitent une colonne numérique pour l'axe Y.")
+                            else:
+                                # Filtrer les valeurs nulles pour Y
+                                df_plot_clean = df_plot[df_plot[y_axis].notna()]
+                                if len(df_plot_clean) == 0:
+                                    st.error("⚠️ Aucune donnée valide après suppression des valeurs nulles.")
+                                else:
+                                    fig = px.violin(df_plot_clean, x=x_axis, y=y_axis, color=color_column,
+                                                  title=chart_title, height=chart_height)
+                                    st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Heatmap":
                         if len(numeric_columns) < 1:
@@ -700,34 +806,71 @@ try:
                         if not x_axis or not y_axis:
                             st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un graphique en aires.")
                         else:
-                            if aggregation != "Aucune" and x_axis and y_axis:
-                                if aggregation == "Somme":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
-                                elif aggregation == "Moyenne":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
-                            
-                            fig = px.area(df_plot, x=x_axis, y=y_axis, color=color_column,
-                                        title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                            # Vérifications de sécurité
+                            if x_axis not in df_plot.columns or y_axis not in df_plot.columns:
+                                st.error("⚠️ Une ou plusieurs colonnes sélectionnées n'existent pas dans les données.")
+                            elif df_plot[x_axis].isna().all() or df_plot[y_axis].isna().all():
+                                st.error("⚠️ Les colonnes sélectionnées ne contiennent que des valeurs nulles.")
+                            elif aggregation in ["Somme", "Moyenne"] and df_plot[y_axis].dtype not in ['int64', 'float64']:
+                                st.error(f"⚠️ L'agrégation '{aggregation}' nécessite une colonne numérique pour l'axe Y.")
+                            else:
+                                if aggregation != "Aucune" and x_axis and y_axis:
+                                    if aggregation == "Somme":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
+                                    elif aggregation == "Moyenne":
+                                        df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
+                                
+                                if len(df_plot) == 0:
+                                    st.error("⚠️ Aucune donnée disponible après agrégation.")
+                                else:
+                                    fig = px.area(df_plot, x=x_axis, y=y_axis, color=color_column,
+                                                title=chart_title, height=chart_height)
+                                    st.plotly_chart(fig, use_container_width=True)
                     
                     elif chart_type == "Sunburst":
                         if not names_column:
                             st.error("⚠️ Veuillez sélectionner une colonne pour les catégories.")
                         else:
-                            if path_columns and len(path_columns) > 0:
-                                fig = px.sunburst(df_plot, path=path_columns, values=values_column if values_column else None,
-                                                title=chart_title, height=chart_height)
+                            # Vérifications de sécurité
+                            if names_column not in df_plot.columns:
+                                st.error(f"⚠️ La colonne '{names_column}' n'existe pas dans les données.")
+                            elif df_plot[names_column].isna().all():
+                                st.error("⚠️ La colonne des catégories ne contient que des valeurs nulles.")
+                            elif values_column and values_column not in df_plot.columns:
+                                st.error(f"⚠️ La colonne de valeurs '{values_column}' n'existe pas.")
+                            elif values_column and df_plot[values_column].dtype not in ['int64', 'float64']:
+                                st.error(f"⚠️ La colonne de valeurs '{values_column}' doit être numérique.")
+                            elif path_columns and any(col not in df_plot.columns for col in path_columns):
+                                st.error("⚠️ Une ou plusieurs colonnes du chemin hiérarchique n'existent pas.")
                             else:
-                                # Utiliser une seule colonne
-                                if values_column:
-                                    fig = px.sunburst(df_plot, path=[names_column], values=values_column,
-                                                    title=chart_title, height=chart_height)
+                                if path_columns and len(path_columns) > 0:
+                                    # Filtrer les lignes avec des valeurs nulles dans les colonnes de chemin
+                                    df_plot_clean = df_plot.dropna(subset=path_columns)
+                                    if len(df_plot_clean) == 0:
+                                        st.error("⚠️ Aucune donnée valide après suppression des valeurs nulles.")
+                                    else:
+                                        fig = px.sunburst(df_plot_clean, path=path_columns, values=values_column if values_column else None,
+                                                        title=chart_title, height=chart_height)
+                                        st.plotly_chart(fig, use_container_width=True)
                                 else:
-                                    df_counts = df_plot[names_column].value_counts().reset_index()
-                                    df_counts.columns = [names_column, 'count']
-                                    fig = px.sunburst(df_counts, path=[names_column], values='count',
-                                                    title=chart_title, height=chart_height)
-                            st.plotly_chart(fig, use_container_width=True)
+                                    # Utiliser une seule colonne
+                                    if values_column:
+                                        df_plot_clean = df_plot[[names_column, values_column]].dropna()
+                                        if len(df_plot_clean) == 0:
+                                            st.error("⚠️ Aucune donnée valide après suppression des valeurs nulles.")
+                                        else:
+                                            fig = px.sunburst(df_plot_clean, path=[names_column], values=values_column,
+                                                            title=chart_title, height=chart_height)
+                                            st.plotly_chart(fig, use_container_width=True)
+                                    else:
+                                        df_counts = df_plot[names_column].value_counts().reset_index()
+                                        df_counts.columns = [names_column, 'count']
+                                        if len(df_counts) == 0:
+                                            st.error("⚠️ Aucune donnée à afficher.")
+                                        else:
+                                            fig = px.sunburst(df_counts, path=[names_column], values='count',
+                                                            title=chart_title, height=chart_height)
+                                            st.plotly_chart(fig, use_container_width=True)
                     
                     # Option pour télécharger les données utilisées
                     st.download_button(
