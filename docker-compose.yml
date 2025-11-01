@@ -27,6 +27,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db_backup:/docker-entrypoint-initdb.d
+  streamlit:
+    build: ./streamlit            # folder with your Streamlit Dockerfile
+    container_name: streamlit_dashboard
+    ports:
+      - "8501:8501"              # host:container
+    volumes:
+      - ./streamlit/app:/app      # mount your Streamlit code for live reload
+    environment:
+      - POSTGRES_USER=monuser
+      - POSTGRES_PASSWORD=monpassword
+      - POSTGRES_DB=madb
+    depends_on:
+      - db
 
 volumes:
   postgres_data:
