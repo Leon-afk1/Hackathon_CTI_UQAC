@@ -1,0 +1,4 @@
+streamlit>=1.30
+psycopg2-binary>=2.9
+pandas>=2.0
+plotly>=5.0

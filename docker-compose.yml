@@ -57,6 +57,22 @@ services:
     networks:
       - rag_network
 
+  streamlit:
+    build: ./streamlit            # folder with your Streamlit Dockerfile
+    container_name: streamlit_dashboard
+    ports:
+      - "8502:8502"              # host:container
+    volumes:
+      - ./streamlit/app:/app      # mount your Streamlit code for live reload
+    environment:
+      - POSTGRES_USER=monuser
+      - POSTGRES_PASSWORD=monpassword
+      - POSTGRES_DB=madb
+    depends_on:
+      - db
+    networks:
+      - rag_network
+
 # Réseau partagé pour la communication inter-services
 networks:
   rag_network:
