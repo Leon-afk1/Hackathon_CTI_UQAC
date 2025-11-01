@@ -487,140 +487,133 @@ try:
             st.markdown("---")
             st.subheader("🎨 Créateur de graphiques personnalisés")
             
-            with st.expander("Créer un graphique personnalisé", expanded=False):
-                st.info(f"ℹ️ Les graphiques personnalisés utilisent l'ensemble complet des données ({len(df_all)} éléments)")
+            st.info(f"ℹ️ Les graphiques personnalisés utilisent l'ensemble complet des données ({len(df_all)} éléments)")
+            
+            # Utiliser df_all pour les graphiques personnalisés
+            df_custom = df_all.copy()
+            
+            # Obtenir les colonnes disponibles
+            available_columns = list(df_custom.columns)
+            numeric_columns = list(df_custom.select_dtypes(include=[np.number]).columns)
+            categorical_columns = list(df_custom.select_dtypes(include=['object', 'category', 'bool']).columns)
+            
+            col_config1, col_config2 = st.columns(2)
+            
+            # Initialiser toutes les variables à None
+            x_axis = None
+            y_axis = None
+            color_column = None
+            size_column = None
+            names_column = None
+            values_column = None
+            path_columns = None
+            
+            with col_config1:
+                # Type de graphique
+                chart_type = st.selectbox(
+                    "Type de graphique",
+                    ["Bar Chart", "Line Chart", "Scatter Plot", "Pie Chart", "Histogram", 
+                     "Box Plot", "Violin Plot", "Heatmap", "Area Chart", "Sunburst"],
+                    help="Sélectionnez le type de visualisation"
+                )
                 
-                # Utiliser df_all pour les graphiques personnalisés
-                df_custom = df_all.copy()
-                
-                # Obtenir les colonnes disponibles
-                available_columns = list(df_custom.columns)
-                numeric_columns = list(df_custom.select_dtypes(include=[np.number]).columns)
-                categorical_columns = list(df_custom.select_dtypes(include=['object', 'category', 'bool']).columns)
-                
-                col_config1, col_config2 = st.columns(2)
-                
-                with col_config1:
-                    # Type de graphique
-                    chart_type = st.selectbox(
-                        "Type de graphique",
-                        ["Bar Chart", "Line Chart", "Scatter Plot", "Pie Chart", "Histogram", 
-                         "Box Plot", "Violin Plot", "Heatmap", "Area Chart", "Sunburst"],
-                        help="Sélectionnez le type de visualisation"
+                # Axe X
+                if chart_type not in ["Pie Chart", "Histogram", "Sunburst"]:
+                    x_axis = st.selectbox(
+                        "Axe X",
+                        available_columns,
+                        help="Choisissez la colonne pour l'axe X"
                     )
-                    
-                    # Axe X
-                    if chart_type not in ["Pie Chart", "Histogram", "Sunburst"]:
-                        x_axis = st.selectbox(
-                            "Axe X",
-                            available_columns,
-                            help="Choisissez la colonne pour l'axe X"
-                        )
-                    else:
-                        x_axis = None
-                    
-                    # Axe Y
-                    if chart_type not in ["Pie Chart", "Sunburst"]:
-                        if chart_type == "Histogram":
-                            y_axis = st.selectbox(
-                                "Valeur à analyser",
-                                numeric_columns if numeric_columns else available_columns,
-                                help="Choisissez la colonne pour l'histogramme"
-                            )
-                        else:
-                            y_axis = st.selectbox(
-                                "Axe Y",
-                                available_columns,
-                                help="Choisissez la colonne pour l'axe Y"
-                            )
-                    else:
-                        y_axis = None
                 
-                with col_config2:
-                    # Couleur
-                    use_color = st.checkbox("Utiliser une colonne pour les couleurs", value=False)
-                    if use_color:
-                        color_column = st.selectbox(
-                            "Colonne de couleur",
-                            [None] + available_columns,
-                            help="Sélectionnez une colonne pour différencier par couleur"
-                        )
-                    else:
-                        color_column = None
-                    
-                    # Taille (pour scatter plot)
-                    if chart_type == "Scatter Plot":
-                        use_size = st.checkbox("Utiliser une colonne pour la taille", value=False)
-                        if use_size:
-                            size_column = st.selectbox(
-                                "Colonne de taille",
-                                [None] + numeric_columns,
-                                help="Sélectionnez une colonne numérique pour la taille des points"
-                            )
-                        else:
-                            size_column = None
-                    else:
-                        size_column = None
-                    
-                    # Options pour Pie Chart et Sunburst
-                    if chart_type in ["Pie Chart", "Sunburst"]:
-                        names_column = st.selectbox(
-                            "Catégories (noms)",
-                            categorical_columns if categorical_columns else available_columns,
-                            help="Choisissez la colonne pour les catégories"
-                        )
-                        values_column = st.selectbox(
-                            "Valeurs",
+                # Axe Y
+                if chart_type not in ["Pie Chart", "Sunburst"]:
+                    if chart_type == "Histogram":
+                        y_axis = st.selectbox(
+                            "Valeur à analyser",
                             numeric_columns if numeric_columns else available_columns,
-                            help="Choisissez la colonne pour les valeurs (laisser vide pour compter)"
+                            help="Choisissez la colonne pour l'histogramme"
                         )
-                        if chart_type == "Sunburst":
-                            use_path = st.checkbox("Utiliser une hiérarchie", value=False)
-                            if use_path:
-                                path_columns = st.multiselect(
-                                    "Colonnes hiérarchiques (ordre important)",
-                                    available_columns,
-                                    help="Sélectionnez les colonnes dans l'ordre hiérarchique"
-                                )
-                            else:
-                                path_columns = None
+                    else:
+                        y_axis = st.selectbox(
+                            "Axe Y",
+                            available_columns,
+                            help="Choisissez la colonne pour l'axe Y"
+                        )
+            
+            with col_config2:
+                # Couleur
+                use_color = st.checkbox("Utiliser une colonne pour les couleurs", value=False)
+                if use_color:
+                    color_column = st.selectbox(
+                        "Colonne de couleur",
+                        [None] + available_columns,
+                        help="Sélectionnez une colonne pour différencier par couleur"
+                    )
+                
+                # Taille (pour scatter plot)
+                if chart_type == "Scatter Plot":
+                    use_size = st.checkbox("Utiliser une colonne pour la taille", value=False)
+                    if use_size:
+                        size_column = st.selectbox(
+                            "Colonne de taille",
+                            [None] + numeric_columns,
+                            help="Sélectionnez une colonne numérique pour la taille des points"
+                        )
+                
+                # Options pour Pie Chart et Sunburst
+                if chart_type in ["Pie Chart", "Sunburst"]:
+                    names_column = st.selectbox(
+                        "Catégories (noms)",
+                        categorical_columns if categorical_columns else available_columns,
+                        help="Choisissez la colonne pour les catégories"
+                    )
+                    values_column = st.selectbox(
+                        "Valeurs (optionnel)",
+                        [None] + (numeric_columns if numeric_columns else available_columns),
+                        help="Choisissez la colonne pour les valeurs (laisser vide pour compter les occurrences)"
+                    )
+                    if chart_type == "Sunburst":
+                        use_path = st.checkbox("Utiliser une hiérarchie", value=False)
+                        if use_path:
+                            path_columns = st.multiselect(
+                                "Colonnes hiérarchiques (ordre important)",
+                                available_columns,
+                                help="Sélectionnez les colonnes dans l'ordre hiérarchique"
+                            )
+            
+            # Options supplémentaires
+            col_opt1, col_opt2, col_opt3 = st.columns(3)
+            with col_opt1:
+                chart_title = st.text_input("Titre du graphique", value=f"{chart_type} personnalisé")
+            with col_opt2:
+                if chart_type in ["Bar Chart", "Line Chart", "Area Chart"]:
+                    aggregation = st.selectbox(
+                        "Agrégation",
+                        ["Aucune", "Somme", "Moyenne", "Compte", "Min", "Max"],
+                        help="Comment agréger les données"
+                    )
+                else:
+                    aggregation = "Aucune"
+            with col_opt3:
+                chart_height = st.slider("Hauteur du graphique", 300, 800, 500, 50)
+            
+            # Bouton pour générer le graphique
+            if st.button("Générer le graphique", type="primary", use_container_width=True):
+                try:
+                    df_plot = df_custom.copy()
+                    
+                    # Créer le graphique selon le type
+                    if chart_type == "Bar Chart":
+                        if not x_axis or not y_axis:
+                            st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un graphique en barres.")
                         else:
-                            path_columns = None
-                    else:
-                        names_column = None
-                        values_column = None
-                        path_columns = None
-                
-                # Options supplémentaires
-                col_opt1, col_opt2, col_opt3 = st.columns(3)
-                with col_opt1:
-                    chart_title = st.text_input("Titre du graphique", value=f"{chart_type} personnalisé")
-                with col_opt2:
-                    if chart_type in ["Bar Chart", "Line Chart", "Area Chart"]:
-                        aggregation = st.selectbox(
-                            "Agrégation",
-                            ["Aucune", "Somme", "Moyenne", "Compte", "Min", "Max"],
-                            help="Comment agréger les données"
-                        )
-                    else:
-                        aggregation = "Aucune"
-                with col_opt3:
-                    chart_height = st.slider("Hauteur du graphique", 300, 800, 500, 50)
-                
-                # Bouton pour générer le graphique
-                if st.button("Générer le graphique", type="primary", use_container_width=True):
-                    try:
-                        df_plot = df_custom.copy()
-                        
-                        # Créer le graphique selon le type
-                        if chart_type == "Bar Chart":
                             if aggregation != "Aucune" and x_axis and y_axis:
                                 if aggregation == "Somme":
                                     df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
                                 elif aggregation == "Moyenne":
                                     df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
                                 elif aggregation == "Compte":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].count().reset_index()
+                                    df_plot = df_plot.groupby(x_axis).size().reset_index(name=y_axis)
                                 elif aggregation == "Min":
                                     df_plot = df_plot.groupby(x_axis)[y_axis].min().reset_index()
                                 elif aggregation == "Max":
@@ -628,24 +621,36 @@ try:
                             
                             fig = px.bar(df_plot, x=x_axis, y=y_axis, color=color_column, 
                                         title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Line Chart":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Line Chart":
+                        if not x_axis or not y_axis:
+                            st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un graphique linéaire.")
+                        else:
                             if aggregation != "Aucune" and x_axis and y_axis:
                                 if aggregation == "Somme":
                                     df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
                                 elif aggregation == "Moyenne":
                                     df_plot = df_plot.groupby(x_axis)[y_axis].mean().reset_index()
                                 elif aggregation == "Compte":
-                                    df_plot = df_plot.groupby(x_axis)[y_axis].count().reset_index()
+                                    df_plot = df_plot.groupby(x_axis).size().reset_index(name=y_axis)
                             
                             fig = px.line(df_plot, x=x_axis, y=y_axis, color=color_column,
                                          title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Scatter Plot":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Scatter Plot":
+                        if not x_axis or not y_axis:
+                            st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un nuage de points.")
+                        else:
                             fig = px.scatter(df_plot, x=x_axis, y=y_axis, color=color_column,
                                            size=size_column, title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Pie Chart":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Pie Chart":
+                        if not names_column:
+                            st.error("⚠️ Veuillez sélectionner une colonne pour les catégories.")
+                        else:
                             if values_column:
                                 fig = px.pie(df_plot, names=names_column, values=values_column,
                                            title=chart_title, height=chart_height)
@@ -655,26 +660,46 @@ try:
                                 df_counts.columns = [names_column, 'count']
                                 fig = px.pie(df_counts, names=names_column, values='count',
                                            title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Histogram":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Histogram":
+                        if not y_axis:
+                            st.error("⚠️ Veuillez sélectionner une valeur à analyser pour créer un histogramme.")
+                        else:
                             fig = px.histogram(df_plot, x=y_axis, color=color_column,
                                              title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Box Plot":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Box Plot":
+                        if not y_axis:
+                            st.error("⚠️ Veuillez sélectionner au moins l'axe Y pour créer un box plot.")
+                        else:
                             fig = px.box(df_plot, x=x_axis, y=y_axis, color=color_column,
                                         title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Violin Plot":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Violin Plot":
+                        if not y_axis:
+                            st.error("⚠️ Veuillez sélectionner au moins l'axe Y pour créer un violin plot.")
+                        else:
                             fig = px.violin(df_plot, x=x_axis, y=y_axis, color=color_column,
                                           title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Heatmap":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Heatmap":
+                        if len(numeric_columns) < 1:
+                            st.error("⚠️ Aucune colonne numérique disponible pour créer une heatmap.")
+                        else:
                             # Pour heatmap, on utilise les colonnes numériques
                             numeric_df = df_plot[numeric_columns].corr() if len(numeric_columns) > 1 else df_plot[numeric_columns]
                             fig = px.imshow(numeric_df, title=chart_title, height=chart_height,
                                           labels=dict(color="Valeur"))
-                        
-                        elif chart_type == "Area Chart":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Area Chart":
+                        if not x_axis or not y_axis:
+                            st.error("⚠️ Veuillez sélectionner les axes X et Y pour créer un graphique en aires.")
+                        else:
                             if aggregation != "Aucune" and x_axis and y_axis:
                                 if aggregation == "Somme":
                                     df_plot = df_plot.groupby(x_axis)[y_axis].sum().reset_index()
@@ -683,8 +708,12 @@ try:
                             
                             fig = px.area(df_plot, x=x_axis, y=y_axis, color=color_column,
                                         title=chart_title, height=chart_height)
-                        
-                        elif chart_type == "Sunburst":
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    elif chart_type == "Sunburst":
+                        if not names_column:
+                            st.error("⚠️ Veuillez sélectionner une colonne pour les catégories.")
+                        else:
                             if path_columns and len(path_columns) > 0:
                                 fig = px.sunburst(df_plot, path=path_columns, values=values_column if values_column else None,
                                                 title=chart_title, height=chart_height)
@@ -698,21 +727,19 @@ try:
                                     df_counts.columns = [names_column, 'count']
                                     fig = px.sunburst(df_counts, path=[names_column], values='count',
                                                     title=chart_title, height=chart_height)
-                        
-                        # Afficher le graphique
-                        st.plotly_chart(fig, use_container_width=True)
-                        
-                        # Option pour télécharger les données utilisées
-                        st.download_button(
-                            label="📥 Télécharger les données du graphique (CSV)",
-                            data=df_plot.to_csv(index=False).encode('utf-8'),
-                            file_name=f"{chart_type.lower().replace(' ', '_')}_data.csv",
-                            mime="text/csv"
-                        )
-                        
-                    except Exception as e:
-                        st.error(f"Erreur lors de la création du graphique: {str(e)}")
-                        st.info("Assurez-vous que les colonnes sélectionnées sont compatibles avec le type de graphique choisi.")
+                            st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Option pour télécharger les données utilisées
+                    st.download_button(
+                        label="📥 Télécharger les données du graphique (CSV)",
+                        data=df_plot.to_csv(index=False).encode('utf-8'),
+                        file_name=f"{chart_type.lower().replace(' ', '_')}_data.csv",
+                        mime="text/csv"
+                    )
+                    
+                except Exception as e:
+                    st.error(f"Erreur lors de la création du graphique: {str(e)}")
+                    st.info("Assurez-vous que les colonnes sélectionnées sont compatibles avec le type de graphique choisi.")
             
         else:
             st.warning("Aucune donnée disponible pour cet endpoint.")
