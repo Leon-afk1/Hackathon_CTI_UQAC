@@ -1,22 +1,49 @@
 # Fichier : docker-compose.yml
+# Architecture multi-services avec Dockerfile dédié par composant
 
 services:
-  backend:
-    build: ./backend
-    container_name: rag_backend
+  # Service API FastAPI
+  api:
+    build: ./backend/api
+    container_name: rag_api
     ports:
       - "8000:8000"
     volumes:
-      - ./backend/app:/app
+      - ./backend/api:/app
     environment:
       - POSTGRES_USER=monuser
       - POSTGRES_PASSWORD=monpassword
       - POSTGRES_DB=madb
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
     depends_on:
       - db
+    networks:
+      - rag_network
 
+  # Service Chatbot Streamlit
+  chatbot:
+    build: ./backend/chatbot
+    container_name: rag_chatbot
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./backend/chatbot:/app
+    environment:
+      - POSTGRES_USER=monuser
+      - POSTGRES_PASSWORD=monpassword
+      - POSTGRES_DB=madb
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    depends_on:
+      - db
+      - api
+    networks:
+      - rag_network
+
+  # Service PostgreSQL
   db:
-    image: postgres:18-alpine # <-- LA VERSION QUE TU AS TROUVÉE !
+    image: postgres:18-alpine
     container_name: rag_db
     environment:
       - POSTGRES_USER=monuser
@@ -27,11 +54,14 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db_backup:/docker-entrypoint-initdb.d
+    networks:
+      - rag_network
+
   streamlit:
     build: ./streamlit            # folder with your Streamlit Dockerfile
     container_name: streamlit_dashboard
     ports:
-      - "8501:8501"              # host:container
+      - "8502:8502"              # host:container
     volumes:
       - ./streamlit/app:/app      # mount your Streamlit code for live reload
     environment:
@@ -40,6 +70,13 @@ services:
       - POSTGRES_DB=madb
     depends_on:
       - db
+    networks:
+      - rag_network
+
+# Réseau partagé pour la communication inter-services
+networks:
+  rag_network:
+    driver: bridge
 
 volumes:
   postgres_data:
