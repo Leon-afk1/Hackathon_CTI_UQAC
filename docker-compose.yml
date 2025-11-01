@@ -15,6 +15,22 @@ services:
     depends_on:
       - db
 
+  streamlit:
+    build: ./backend
+    container_name: rag_streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./backend/app:/app
+    environment:
+      - POSTGRES_USER=monuser
+      - POSTGRES_PASSWORD=monpassword
+      - POSTGRES_DB=madb
+    depends_on:
+      - db
+      - backend
+    command: streamlit run /app/chatbot_app.py --server.port 8501 --server.address 0.0.0.0
+
   db:
     image: postgres:18-alpine # <-- LA VERSION QUE TU AS TROUVÉE !
     container_name: rag_db

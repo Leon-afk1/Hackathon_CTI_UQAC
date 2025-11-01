@@ -1,12 +1,16 @@
 # Framework web
 flask
+fastapi 
+uvicorn 
+streamlit
 
 # Connecteur PostgreSQL
 psycopg2-binary
-fastapi 
-uvicorn 
 sqlalchemy 
 pydantic
 
 # Pour la gestion des variables d'environnement
 python-dotenv
+
+# Google Generative AI
+google-generativeai
