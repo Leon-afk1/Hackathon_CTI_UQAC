@@ -2455,10 +2455,4 @@ elif page == "✏️ Gestion des données":
                 except Exception as e:
                     st.error(f"❌ Erreur: {str(e)}")
 
-# Footer
-st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown("""
-<div style='text-align: center; color: #94a3b8; padding: 2rem 0; font-size: 0.875rem;'>
-    <p>Safety Analytics Dashboard | Powered by Streamlit & Plotly</p>
-</div>
-""", unsafe_allow_html=True)
+
