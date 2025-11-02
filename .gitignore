@@ -213,4 +213,10 @@ marimo/_lsp/
 __marimo__/
 
 # Streamlit
+# Streamlit
 .streamlit/secrets.toml
+
+# Backups automatiques
+backend/chatbot/backups/
+backups/
+*.backup.json
