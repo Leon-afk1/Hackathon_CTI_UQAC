@@ -773,25 +773,40 @@ with tab2:
                     event_desc = str(event.get('description', 'Aucune description'))
                     event_desc_short = event_desc[:80] + '...' if len(event_desc) > 80 else event_desc
                     
-                    # Preview courte pour le titre de l'expander
-                    preview_title = f"{icon} {event_type} | {event_date_short} | {event_unit[:20]}"
+                    # Preview courte pour la carte
+                    preview_title = f"{icon} {event_type}"
                     
-                    # Créer un expander avec preview
-                    with st.expander(preview_title, expanded=False):
-                        st.markdown(f"<span class='event-badge {badge_class}' style='display: inline-block; margin-bottom: 1rem;'>{badge_text}</span>", unsafe_allow_html=True)
+                    # Créer une carte cliquable avec un bouton
+                    st.markdown(f"""
+                    <div style='background: rgba(30, 41, 59, 0.6); border-radius: 12px; padding: 1rem; margin-bottom: 0.5rem; border: 1px solid rgba(100, 116, 139, 0.3);'>
+                        <span class='event-badge {badge_class}' style='display: inline-block; margin-bottom: 0.5rem;'>{badge_text}</span>
+                        <h4 style='color: #f1f5f9; margin: 0.5rem 0;'>{preview_title}</h4>
+                        <p style='color: #94a3b8; font-size: 0.9rem; margin: 0.3rem 0;'>{event_date_short}</p>
+                        <p style='color: #94a3b8; font-size: 0.85rem; margin: 0.3rem 0;'>{event_unit[:30]}</p>
+                        <p style='color: #64748b; font-size: 0.85rem; margin-top: 0.5rem;'>{event_desc_short}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Bouton pour ouvrir le dialogue
+                    if st.button("Voir les détails", key=f"event_btn_{idx}", use_container_width=True):
                         
-                        st.markdown(f"""
-                        <div style='padding: 0.5rem 0;'>
-                            <h4 style='color: #f1f5f9; margin: 0 0 1rem 0;'>{event_type}</h4>
-                            <p style='color: #cbd5e1; margin: 0.5rem 0;'><strong>Date:</strong> {event_date}</p>
-                            <p style='color: #cbd5e1; margin: 0.5rem 0;'><strong>Unité:</strong> {event_unit}</p>
-                            <p style='color: #cbd5e1; margin: 0.5rem 0;'><strong>Classification:</strong> {event.get('classification', 'N/A')}</p>
-                            <div style='margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(226, 232, 240, 0.2);'>
-                                <p style='color: #94a3b8; margin: 0.5rem 0;'><strong>Description:</strong></p>
-                                <p style='color: #94a3b8; line-height: 1.6; margin-top: 0.5rem;'>{event_desc}</p>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        @st.dialog(f"{icon} {event_type}", width="large")
+                        def show_event_details():
+                            st.markdown(f"<span class='event-badge {badge_class}' style='display: inline-block; margin-bottom: 1rem;'>{badge_text}</span>", unsafe_allow_html=True)
+                            
+                            st.markdown("### Informations générales")
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.markdown(f"**Date:** {event_date}")
+                                st.markdown(f"**Type:** {event_type}")
+                            with col2:
+                                st.markdown(f"**Unité:** {event_unit}")
+                                st.markdown(f"**Classification:** {event.get('classification', 'N/A')}")
+                            
+                            st.markdown("### Description")
+                            st.markdown(f"<p style='color: #cbd5e1; line-height: 1.6;'>{event_desc}</p>", unsafe_allow_html=True)
+                        
+                        show_event_details()
         
         # Contrôles de pagination
         st.markdown("<br>", unsafe_allow_html=True)
