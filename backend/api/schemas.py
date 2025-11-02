@@ -30,14 +30,6 @@ class Event(EventBase):
     
     model_config = ConfigDict(from_attributes=True)
 
-class EventEnriched(Event):
-    """Event avec informations extraites de la description"""
-    extracted_date: Optional[str] = None
-    extracted_time: Optional[str] = None
-    extracted_shift: Optional[str] = None
-    
-    model_config = ConfigDict(from_attributes=True)
-
 # ============ PERSON SCHEMAS ============
 class PersonBase(BaseModel):
     matricule: str
