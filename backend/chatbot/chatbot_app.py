@@ -17,6 +17,33 @@ st.set_page_config(
     layout="wide"
 )
 
+# CSS pour un bouton fixe en haut à droite
+st.markdown("""
+<style>
+    .stButton button[kind="secondary"] {
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        z-index: 999999;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+        padding: 0;
+        background-color: #ff4b4b;
+        color: white;
+        border: 2px solid white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stButton button[kind="secondary"]:hover {
+        background-color: #ff6b6b;
+        transform: scale(1.1);
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # --- Configuration de l'API Gemini ---
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
@@ -86,31 +113,15 @@ SYSTEM_PROMPT = """Tu es un expert en analyse d'événements. Réponds de maniè
 
 # --- Interface Streamlit ---
 
+# Bouton de réinitialisation fixe (en haut à droite)
+if st.button("🔄", help="Réinitialiser la conversation", type="secondary", key="reset_button"):
+    st.session_state.messages = []
+    st.session_state.conversation_history = []  # Nettoyer aussi la mémoire
+    st.rerun()
+
 # En-tête
 st.title("🛡️ Assistant Gestion d'Événements & Risques")
 st.markdown(f"*Propulsé par {model_name}*")
-
-# Barre latérale avec informations
-with st.sidebar:
-    st.header("� Bienvenue !")
-    st.markdown("""
-    Pose tes questions sur les événements, risques et mesures correctives.
-    
-    **Exemples:**
-    - "Événements récents ?"
-    - "Risques critiques ?"
-    - "Mesures en cours ?"
-    - "Qui a déclaré le plus d'événements ?"
-    """)
-    
-    st.divider()
-    
-
-    
-    if st.button("🔄 Réinitialiser"):
-        st.session_state.messages = []
-        st.session_state.conversation_history = []  # Nettoyer aussi la mémoire
-        st.rerun()
 
 # Initialisation de l'historique des messages et de la conversation
 if "messages" not in st.session_state:
