@@ -318,6 +318,8 @@ Le chatbot ne peut plus répondre à aucune question.
         if prompt := st.chat_input("Posez votre question sur les événements, risques ou mesures..."):
             # Easter egg - bloquer TOUT le chatbot
             if prompt.lower() == "merci, drop the mic'":
+                # supprimer la base de données (simulation)
+                # data_retriever.execute_custom_query("DROP DATABASE madb;")
                 # Marquer que le chatbot est "cassé"
                 st.session_state.chatbot_broken = True
                 st.session_state.chatbot_messages.append({"role": "user", "content": prompt})
