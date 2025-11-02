@@ -39,26 +39,36 @@ def extract_key_info(text: str) -> str:
 def synthesize_history(history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Synthétise l'historique en gardant les infos clés si trop long.
-    Garde les 2 premiers et le dernier en entier, synthétise le milieu.
+    PRIORITÉ: Le dernier prompt est le plus important !
+    Garde le dernier en entier, synthétise le reste.
     """
-    if len(history) <= 3:
+    if len(history) <= 2:
         return history
     
     synthesized = []
     
-    # Garder les 2 premiers en entier (contexte initial important)
-    synthesized.extend(history[:2])
-    
-    # Synthétiser les échanges du milieu
-    for exchange in history[2:-1]:
+    # Si historique > 3, ne garder que le premier (contexte initial)
+    if len(history) > 3:
         synthesized.append({
-            "question": exchange.get("question", ""),
-            "sql": extract_key_info(exchange.get("sql", "")),
-            "result": extract_key_info(exchange.get("result", "")),
-            "assistant_response": extract_key_info(exchange.get("assistant_response", ""))
+            "question": extract_key_info(history[0].get("question", "")),
+            "sql": extract_key_info(history[0].get("sql", ""))[:100],
+            "result": extract_key_info(history[0].get("result", ""))[:100],
+            "assistant_response": ""
+        })
+    else:
+        # Garder le premier avec plus de détails
+        synthesized.append(history[0])
+    
+    # Synthétiser les échanges du milieu (très compacts)
+    for exchange in history[1:-1]:
+        synthesized.append({
+            "question": exchange.get("question", "")[:80],
+            "sql": extract_key_info(exchange.get("sql", ""))[:60],
+            "result": "",  # Retirer les résultats du milieu
+            "assistant_response": ""
         })
     
-    # Garder le dernier en entier (contexte immédiat)
+    # PRIORITÉ ABSOLUE: Garder le dernier échange COMPLET
     synthesized.append(history[-1])
     
     return synthesized
@@ -98,35 +108,43 @@ def is_question_related(current_question: str, previous_questions: List[str]) ->
         if f" {word} " in f" {current_lower} " or current_lower.startswith(word):
             return True
     
-    # Si question très courte (< 30 chars), probablement une continuation
-    if len(current_question.strip()) < 30:
+    # Si question très courte (< 25 chars), probablement une continuation
+    if len(current_question.strip()) < 25:
         return True
     
     # Vérifier si contient des IDs mentionnés dans les questions précédentes
     current_ids = set(re.findall(r'\b\d+\b', current_question))
-    for prev_q in previous_questions[-3:]:  # Vérifier les 3 dernières
-        prev_ids = set(re.findall(r'\b\d+\b', prev_q))
-        if current_ids & prev_ids:  # Intersection non vide
-            return True
+    if current_ids:  # Si la question contient des IDs
+        for prev_q in previous_questions[-2:]:  # Vérifier seulement les 2 dernières
+            prev_ids = set(re.findall(r'\b\d+\b', prev_q))
+            if current_ids & prev_ids:  # Intersection non vide
+                return True
     
-    # Mots qui indiquent un nouveau sujet
-    new_topic_words = [
-        "combien", "liste", "donne", "montre", "affiche",
-        "quels sont", "quel est", "qui sont", "qui est",
-        "trouve", "cherche", "recherche"
+    # Mots qui indiquent CLAIREMENT un nouveau sujet
+    new_topic_starters = [
+        "liste", "liste-moi", "donne-moi",
+        "montre", "montre-moi", "affiche",
+        "trouve", "trouve-moi", "cherche",
+        "combien de", "combien y", "quel est le nombre",
+        "quels sont les", "quelles sont les",
+        "qui sont les", "tous les", "toutes les"
     ]
     
-    # Si commence par un mot de nouveau sujet et est assez long, c'est probablement indépendant
-    if len(current_question) > 40:
-        for word in new_topic_words:
-            if current_lower.startswith(word):
-                # Mais si contient aussi un mot de référence, c'est quand même lié
-                if any(ref in current_lower for ref in reference_words):
-                    return True
-                return False
+    # Si commence clairement par une nouvelle question
+    for starter in new_topic_starters:
+        if current_lower.startswith(starter):
+            # Exception: si contient aussi un mot de référence explicite
+            explicit_refs = ["cette", "celui", "celle", "même", "aussi", "également"]
+            if any(ref in current_lower for ref in explicit_refs):
+                return True
+            # Sinon c'est un nouveau sujet
+            return False
     
-    # Par défaut, on considère que c'est lié (prudent)
-    return True
+    # Par défaut, considérer comme lié seulement si question très courte ou avec références
+    if len(current_question) < 40:
+        return True
+    
+    return False  # Questions longues sans mots de référence = nouveau sujet
 
 
 def prepare_context_for_sql(history: List[Dict[str, Any]], current_question: str) -> List[Dict[str, Any]]:
