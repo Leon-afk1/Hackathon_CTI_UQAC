@@ -10,3 +10,4 @@ python-dotenv>=1.0.0
 reportlab>=4.0.0
 kaleido>=0.2.1
 sqlalchemy>=2.0.0
+Pillow>=10.0.0

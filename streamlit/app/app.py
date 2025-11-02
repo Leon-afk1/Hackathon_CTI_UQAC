@@ -7,6 +7,63 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 from chatbot_integration import render_chatbot
+import google.generativeai as genai
+from PIL import Image
+import io
+import os
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement
+load_dotenv()
+
+# Fonction pour analyser une image avec Gemini
+def analyze_event_image_with_gemini(image_file):
+    """Analyse une image d'événement avec Gemini et génère une description."""
+    try:
+        # Configurer l'API Gemini
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return None, "⚠️ Clé API Gemini non trouvée. Veuillez configurer GEMINI_API_KEY."
+        
+        genai.configure(api_key=api_key)
+        
+        # Charger l'image
+        image = Image.open(image_file)
+        
+        # Initialiser le modèle
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        # Créer le prompt pour l'analyse
+        prompt = """Analyse cette image d'événement de sécurité et génère une description détaillée et professionnelle en français.
+
+La description doit suivre ce format narratif détaillé (voir exemples) :
+
+EXEMPLE 1 (déversement chimique):
+"Le 2 avril 2024, vers 21h45 durant le quart de soir, Natasha Ivanov (EMP-00136), spécialiste en inventaire chimique, effectuait une vérification d'inventaire de routine dans la zone de gestion des déchets dangereux (UNIT-011). Alors qu'elle déplaçait un baril de 55 gallons d'acétone (solvant de nettoyage) à l'aide d'un diable pour le repositionner dans le cadre de la rotation des stocks, le bouchon du baril s'est partiellement dégagé en raison des vibrations durant le transport. Environ 12-15 litres d'acétone se sont déversés sur le plancher de béton et ont commencé à former une flaque près de l'armoire de stockage chimique. Les vapeurs volatiles se sont rapidement dispersées dans la zone extérieure. Natasha a immédiatement activé le système de ventilation d'urgence et s'est évacuée à 8 mètres contre le vent du déversement. Elle a notifié Luc-André Beaudoin (EMP-00139), superviseur d'entrepôt, qui a initié les procédures de confinement. Le déversement a été confiné avec des tampons absorbants et éliminé selon les protocoles CNESST. Aucun employé n'a éprouvé de symptômes d'exposition chimique aiguë. L'incident a été attribué à un mauvais scellage du bouchon lors du cycle d'inventaire précédent et à un amortissement inadéquat des vibrations sur le diable."
+
+EXEMPLE 2 (exposition à des vapeurs):
+"Le 14 mars 2024, vers 14h15 durant le quart de jour, le technicien de moulage Stéphane Moreau (EMP-00021) retirait un moule d'injection complété de la ligne de moulage C dans la salle blanche des composants médicaux (UNIT-003). Il utilisait un agent de démoulage en aérosol standard. Alors qu'il vaporisait la surface du moule à courte distance sans ajustement adéquat de la ventilation, les vapeurs de solvant se sont accumulées dans l'espace de travail fermé. Après 8 minutes de vaporisation continue, Stéphane a ressenti des étourdissements aigus, des maux de tête et de légères nausées. L'opérateur de machine Emmanuel Kouassi (EMP-00058) a remarqué que Stéphane titubait et a immédiatement appelé à l'aide. Le superviseur de production Maxime Boisvert (EMP-00101) est arrivé en 2 minutes et a déplacé Stéphane vers la salle de pause à l'air frais. Les symptômes se sont résorbés en 15 minutes. L'infirmière en santé au travail Hana Al-Rashid (EMP-00052) a effectué une évaluation et déterminé que l'incident était causé par une ventilation d'extraction locale inadéquate et une technique de travail inappropriée."
+
+INSTRUCTIONS IMPORTANTES:
+- Décris UNIQUEMENT ce qui est visible dans l'image
+- Si la date, l'heure, les noms de personnes, ou les identifiants ne sont pas visibles : N'INVENTE PAS ces informations
+- Utilise des formulations génériques comme : "Durant les opérations...", "Un employé...", "Un travailleur...", "Dans la zone de..."
+- Concentre-toi sur : le type d'événement, l'équipement visible, les conditions observables, les risques identifiables
+- Reste factuel et professionnel
+- Rédige 3-5 phrases décrivant la situation visible
+
+Génère maintenant une description détaillée basée UNIQUEMENT sur ce qui est visible dans l'image."""
+
+        # Générer la description
+        response = model.generate_content([prompt, image])
+        
+        if response and response.text:
+            return response.text.strip(), None
+        else:
+            return None, "❌ Aucune réponse générée par Gemini."
+            
+    except Exception as e:
+        return None, f"❌ Erreur lors de l'analyse de l'image : {str(e)}"
 
 # Configuration de la page
 st.set_page_config(
@@ -2260,10 +2317,81 @@ elif page == "✏️ Gestion des données":
                     key=f"create_{field_name}"
                 )
             elif field_info["type"] == "textarea":
+                # Module d'analyse d'image uniquement pour la description des événements
+                if selected_table == "events" and field_name == "description":
+                    st.markdown("---")
+                    st.markdown("#### 📸 Analyse d'image (optionnel)")
+                    st.markdown("Téléchargez une image de l'événement pour générer automatiquement une description avec l'IA")
+                    
+                    # Initialiser la session state pour la description AI
+                    if "ai_generated_description" not in st.session_state:
+                        st.session_state.ai_generated_description = ""
+                    if "use_ai_description" not in st.session_state:
+                        st.session_state.use_ai_description = False
+                    
+                    uploaded_image = st.file_uploader(
+                        "Choisir une image",
+                        type=["jpg", "jpeg", "png"],
+                        key="event_image_uploader",
+                        help="Formats acceptés : JPG, JPEG, PNG"
+                    )
+                    
+                    if uploaded_image is not None:
+                        # Afficher l'image en taille réduite
+                        col_img, col_btn = st.columns([3, 2])
+                        with col_img:
+                            image = Image.open(uploaded_image)
+                            st.image(image, caption="Image téléchargée", width=300)
+                        
+                        with col_btn:
+                            st.write("")  # Espacement
+                            if st.button("🤖 Analyser avec Gemini", type="secondary", use_container_width=True, key="analyze_image_btn"):
+                                with st.spinner("🔍 Analyse de l'image en cours..."):
+                                    # Réinitialiser le pointeur du fichier
+                                    uploaded_image.seek(0)
+                                    description, error = analyze_event_image_with_gemini(uploaded_image)
+                                    
+                                    if error:
+                                        st.error(error)
+                                        st.session_state.ai_generated_description = ""
+                                    else:
+                                        st.session_state.ai_generated_description = description
+                                        st.success("✅ Description générée avec succès !")
+                                        st.rerun()
+                        
+                        # Afficher la description générée si elle existe
+                        if st.session_state.ai_generated_description:
+                            st.markdown("**📝 Description générée par l'IA :**")
+                            
+                            # CSS pour rendre le bouton de copie plus visible
+                            st.markdown("""
+                            <style>
+                            .stCodeBlock button[title="Copy to clipboard"] {
+                                background-color: #4CAF50 !important;
+                                color: white !important;
+                                padding: 8px 16px !important;
+                                border-radius: 6px !important;
+                                font-size: 16px !important;
+                                font-weight: bold !important;
+                                border: 2px solid #45a049 !important;
+                            }
+                            .stCodeBlock button[title="Copy to clipboard"]:hover {
+                                background-color: #45a049 !important;
+                                transform: scale(1.05);
+                            }
+                            </style>
+                            """, unsafe_allow_html=True)
+                            
+                            # Afficher la description dans une zone copiable
+                            st.code(st.session_state.ai_generated_description, language=None)
+                    
+                    st.markdown("---")
+                
                 form_data[field_name] = st.text_area(
                     f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
-                    height=100,
-                    key=f"create_{field_name}"
+                    height=150,
+                    key=f"create_{field_name}",
+                    help="Saisissez ou collez la description de l'événement"
                 )
             elif field_info["type"] == "number":
                 form_data[field_name] = st.number_input(
@@ -2304,6 +2432,12 @@ elif page == "✏️ Gestion des données":
                     if create_response.status_code == 201:
                         new_record = create_response.json()
                         created_id = new_record.get(id_field)
+                        
+                        # Nettoyer la session state (description AI)
+                        if "ai_generated_description" in st.session_state:
+                            del st.session_state.ai_generated_description
+                        if "use_ai_description" in st.session_state:
+                            del st.session_state.use_ai_description
                         
                         # Afficher l'ID créé en grand
                         st.success(f"✅ Enregistrement créé avec succès !")
