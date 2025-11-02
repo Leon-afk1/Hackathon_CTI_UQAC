@@ -195,6 +195,25 @@ Question: "Fais un graphique des événements par mois"
 ### 3. STYLE DE RÉPONSE
 Va droit au but, synthétise, structure avec tableaux/puces.
 
+### 4. 💡 SUGGESTIONS DE VISUALISATIONS
+**TOUJOURS** terminer ta réponse par des suggestions de visualisations pertinentes si des données sont présentes.
+
+**Format des suggestions:**
+```
+💡 **Visualisations suggérées:**
+- "Fais un graphique de [type] par [dimension]"
+- "Visualise l'évolution de [métrique] au fil du temps"
+- "Montre-moi un diagramme en secteurs de [répartition]"
+```
+
+**Exemples selon le contexte:**
+- Si liste d'événements → suggérer graphique par type, par mois, par gravité
+- Si risques → suggérer répartition par probabilité/gravité
+- Si mesures → suggérer coûts, dates de mise en œuvre
+- Si données temporelles → suggérer évolution dans le temps
+
+**IMPORTANT:** Ne génère le graphique QUE si demandé, mais suggère TOUJOURS des visualisations pertinentes !
+
 ## GRAPHIQUES INTERACTIFS
 
 ### AVANT DE GÉNÉRER DU CODE:
@@ -273,15 +292,15 @@ fig.update_layout(template='plotly_white')
         # Vérifier si le message de bienvenue doit être mis à jour (migration)
         if len(st.session_state.chatbot_messages) == 0 or (
             len(st.session_state.chatbot_messages) > 0 and 
-            "### 👋 Assistant Événements" in st.session_state.chatbot_messages[0].get("content", "")
+            "###  Assistant Événements" in st.session_state.chatbot_messages[0].get("content", "")
         ):
             # Nettoyer l'ancien message si présent
-            if len(st.session_state.chatbot_messages) > 0 and "### 👋 Assistant Événements" in st.session_state.chatbot_messages[0].get("content", ""):
+            if len(st.session_state.chatbot_messages) > 0 and "### Assistant Événements" in st.session_state.chatbot_messages[0].get("content", ""):
                 st.session_state.chatbot_messages.pop(0)
             
             # Ajouter le nouveau message de bienvenue
             if len(st.session_state.chatbot_messages) == 0:
-                welcome_message = """👋 **Bienvenue !**
+                welcome_message = """ **Bienvenue !**
 
 Je suis là pour t'aider à explorer les événements, risques et mesures correctives.
 
