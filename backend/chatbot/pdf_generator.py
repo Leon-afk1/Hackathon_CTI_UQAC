@@ -46,6 +46,50 @@ def detect_pdf_request(prompt: str) -> bool:
     return any(re.search(pattern, prompt_lower, re.IGNORECASE) for pattern in pdf_keywords)
 
 
+def analyze_chart_with_ai(chart_data: dict, model) -> str:
+    """
+    Analyse un graphique avec Gemini pour générer une description intelligente.
+    
+    Args:
+        chart_data: Dictionnaire contenant le graphique Plotly et son contexte
+        model: Modèle Gemini
+        
+    Returns:
+        str: Description narrative du graphique
+    """
+    try:
+        # Extraire les informations du graphique
+        chart = chart_data.get('chart')
+        user_question = chart_data.get('question', '')
+        
+        # Obtenir les données du graphique
+        chart_json = chart.to_json() if chart else '{}'
+        
+        prompt = f"""Tu es un analyste de données qui décrit des visualisations de manière professionnelle.
+
+QUESTION DE L'UTILISATEUR:
+{user_question}
+
+DONNÉES DU GRAPHIQUE:
+{chart_json[:1000]}  (aperçu)
+
+Ta mission: Rédige une description narrative de ce graphique (2-3 phrases).
+
+STRUCTURE:
+1. Ce que montre le graphique (type, axes, données)
+2. Les tendances ou patterns principaux observés
+3. L'insight clé à retenir
+
+Exemple: "Ce graphique en barres présente la répartition des événements par niveau de criticité sur le dernier trimestre. On observe une prédominance des incidents de niveau 3 (45%), suivis des niveaux 2 (30%) et 1 (25%). Cette distribution suggère une gestion efficace des cas critiques, avec une majorité d'incidents de criticité modérée."
+
+MAINTENANT, décris le graphique de manière professionnelle et concise:"""
+        
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return "Ce graphique illustre les données relatives à la question posée, permettant une analyse visuelle des tendances observées."
+
+
 def analyze_conversation_for_synthesis(messages: list, model) -> dict:
     """
     Utilise Gemini pour créer une synthèse narrative de la conversation.
@@ -58,15 +102,51 @@ def analyze_conversation_for_synthesis(messages: list, model) -> dict:
         dict: Dictionnaire avec 4 sections (introduction, analyse_thematique, insights, recommandations)
     """
     # Préparer le contexte de la conversation
-    conversation_text = "\n\n".join([
-        f"{'Utilisateur' if msg['role'] == 'user' else 'Assistant'}: {msg.get('content', '')[:500]}"
-        for msg in messages if msg.get('content')
-    ])
+    # Séparer les échanges avec et sans graphiques
+    exchanges_with_charts = []
+    exchanges_without_charts = []
+    
+    for i, msg in enumerate(messages):
+        if msg.get('role') == 'user':
+            user_msg = msg.get('content', '')
+            # Chercher la réponse assistant correspondante
+            assistant_msg = messages[i + 1] if i + 1 < len(messages) else {}
+            
+            if assistant_msg.get('chart'):
+                exchanges_with_charts.append({
+                    'question': user_msg,
+                    'answer': assistant_msg.get('content', '')[:300],
+                    'has_chart': True
+                })
+            else:
+                exchanges_without_charts.append({
+                    'question': user_msg,
+                    'answer': assistant_msg.get('content', '')[:300],
+                    'has_chart': False
+                })
+    
+    # Construire le contexte pour l'IA
+    conversation_text = ""
+    
+    if exchanges_with_charts:
+        conversation_text += "ÉCHANGES AVEC VISUALISATIONS:\n"
+        for exc in exchanges_with_charts:
+            conversation_text += f"Q: {exc['question'][:200]}\nR: {exc['answer']}\n\n"
+    
+    if exchanges_without_charts:
+        conversation_text += "\nÉCHANGES TEXTUELS:\n"
+        for exc in exchanges_without_charts:
+            conversation_text += f"Q: {exc['question'][:200]}\nR: {exc['answer']}\n\n"
     
     analysis_prompt = f"""Tu es un analyste senior qui rédige un rapport de synthèse professionnel.
 
 CONVERSATION ANALYSÉE:
 {conversation_text}
+
+IMPORTANT: 
+- {len(exchanges_with_charts)} échange(s) ont généré des visualisations graphiques
+- {len(exchanges_without_charts)} échange(s) sont purement textuels
+- Intègre TOUS les échanges dans ton analyse de manière fluide
 
 Ta mission: Créer un rapport narratif et fluide, COMME UN HUMAIN L'ÉCRIRAIT.
 
@@ -74,25 +154,28 @@ GÉNÈRE 4 SECTIONS (sépare-les par "---SECTION---"):
 
 1. **INTRODUCTION** (2-3 phrases)
    - Contexte de l'analyse
-   - Période/scope concerné
+   - Mentionne les thématiques explorées (avec ET sans graphiques)
    - Objectifs de la consultation
    - Ton: Professionnel mais naturel
 
-2. **ANALYSE THÉMATIQUE** (1-2 paragraphes)
-   - Regroupe les sujets abordés par thèmes
+2. **ANALYSE THÉMATIQUE** (2-3 paragraphes)
+   - Regroupe TOUS les sujets abordés par thèmes (graphiques + textuels)
    - Identifie les préoccupations principales
+   - Pour les questions avec graphiques: mentionne qu'une visualisation sera présentée
+   - Pour les questions sans graphiques: synthétise les échanges et leur apport au contexte
    - Mentionne les données clés sans format "Question/Réponse"
    - Ton: Analytique et synthétique
 
-3. **OBSERVATIONS ET INSIGHTS** (1-2 paragraphes)
-   - Points saillants découverts
-   - Tendances observées
+3. **OBSERVATIONS ET INSIGHTS** (2-3 paragraphes)
+   - Points saillants découverts dans TOUTE la conversation
+   - Tendances observées (visuelles et textuelles)
    - Corrélations ou patterns identifiés
+   - Intègre les insights des échanges textuels au contexte général
    - Ton: Objectif et factuel
 
 4. **RECOMMANDATIONS STRATÉGIQUES** (3-5 points numérotés)
    - Actions concrètes et priorisées
-   - Basées sur les données réelles discutées
+   - Basées sur TOUTES les données discutées (graphiques + textuelles)
    - Chiffrées quand possible
    - Ton: Directif et actionnable
 
@@ -264,29 +347,76 @@ def generate_professional_pdf(messages: list, model) -> BytesIO:
     story.append(Spacer(1, 0.3 * inch))
     
     # Section 3: VISUALISATIONS ET DONNÉES CLÉS
-    # Extraire les graphiques de la conversation
-    charts = [msg.get('chart') for msg in messages if 'chart' in msg]
+    # Extraire les graphiques avec leur contexte
+    chart_data_list = []
+    for i, msg in enumerate(messages):
+        if 'chart' in msg and msg.get('chart'):
+            # Trouver la question utilisateur correspondante
+            user_question = ""
+            if i > 0 and messages[i-1].get('role') == 'user':
+                user_question = messages[i-1].get('content', '')
+            
+            chart_data_list.append({
+                'chart': msg['chart'],
+                'question': user_question,
+                'index': len(chart_data_list) + 1
+            })
     
-    if charts:
+    if chart_data_list:
         story.append(Paragraph("📈 VISUALISATIONS DES DONNÉES", heading_style))
-        story.append(Paragraph("Les graphiques ci-dessous illustrent les principales tendances identifiées lors de l'analyse:", body_style))
-        story.append(Spacer(1, 0.2 * inch))
+        story.append(Paragraph("Les graphiques ci-dessous illustrent les principales tendances identifiées lors de l'analyse. Chaque visualisation est accompagnée d'une description détaillée pour en faciliter la compréhension.", body_style))
+        story.append(Spacer(1, 0.3 * inch))
         
-        for idx, chart in enumerate(charts, 1):
-            try:
-                # Exporter le graphique Plotly en image
-                img_bytes = chart.to_image(format="png", width=600, height=400)
-                img_buffer = BytesIO(img_bytes)
+        with st.spinner(f"🎨 Analyse intelligente de {len(chart_data_list)} graphique(s)..."):
+            for chart_data in chart_data_list:
+                idx = chart_data['index']
+                chart = chart_data['chart']
                 
-                story.append(Paragraph(f"<b>Figure {idx}</b>", subheading_style))
-                img = Image(img_buffer, width=5.5*inch, height=3.7*inch)
-                story.append(img)
-                story.append(Spacer(1, 0.25 * inch))
-            except Exception as e:
-                story.append(Paragraph(f"<i>[Graphique {idx} non disponible]</i>", body_style))
-                story.append(Spacer(1, 0.1 * inch))
+                try:
+                    # Exporter le graphique Plotly en image
+                    img_bytes = chart.to_image(format="png", width=600, height=400)
+                    img_buffer = BytesIO(img_bytes)
+                    
+                    # Analyser le graphique avec l'IA
+                    chart_description = analyze_chart_with_ai(chart_data, model)
+                    
+                    # Titre du graphique
+                    story.append(Paragraph(f"<b>Figure {idx} - Visualisation des données</b>", subheading_style))
+                    
+                    # Image du graphique
+                    img = Image(img_buffer, width=5.5*inch, height=3.7*inch)
+                    story.append(img)
+                    story.append(Spacer(1, 0.15 * inch))
+                    
+                    # Description IA
+                    description_style = ParagraphStyle(
+                        'ChartDescription',
+                        parent=styles['BodyText'],
+                        fontSize=9,
+                        textColor=colors.HexColor('#374151'),
+                        spaceAfter=10,
+                        leftIndent=15,
+                        rightIndent=15,
+                        alignment=TA_JUSTIFY,
+                        fontName='Helvetica',
+                        backColor=colors.HexColor('#f3f4f6'),
+                        borderPadding=10
+                    )
+                    
+                    story.append(Paragraph(f"<i>Analyse: {chart_description.replace('<', '&lt;').replace('>', '&gt;')}</i>", 
+                                         description_style))
+                    story.append(Spacer(1, 0.3 * inch))
+                    
+                except Exception as e:
+                    story.append(Paragraph(f"<i>[Graphique {idx} non disponible: {str(e)[:100]}]</i>", body_style))
+                    story.append(Spacer(1, 0.2 * inch))
         
         story.append(Spacer(1, 0.2 * inch))
+    else:
+        # Si aucun graphique, mentionner que l'analyse est basée sur les échanges textuels
+        story.append(Paragraph("💬 SYNTHÈSE DES ÉCHANGES", heading_style))
+        story.append(Paragraph("L'analyse présentée dans ce rapport est basée sur les échanges textuels de la consultation. Les sections suivantes synthétisent les thématiques abordées et les insights dégagés.", body_style))
+        story.append(Spacer(1, 0.3 * inch))
     
     # Section 4: OBSERVATIONS ET INSIGHTS
     story.append(Paragraph("💡 OBSERVATIONS ET INSIGHTS", heading_style))
