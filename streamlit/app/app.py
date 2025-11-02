@@ -449,7 +449,7 @@ st.sidebar.markdown("---")
 # Menu de navigation dans la sidebar
 page = st.sidebar.radio(
     "Sélectionnez une page :",
-    ["🤖 Assistant IA", "🏠 Vue d'ensemble", "📅 Événements récents", "📊 Statistiques", "🔍 Analyses détaillées", "🎨 Créateur de graphiques"],
+    ["🤖 Assistant IA", "🏠 Vue d'ensemble", "📅 Événements récents", "📊 Statistiques", "🔍 Analyses détaillées", "🎨 Créateur de graphiques", "✏️ Gestion des données"],
     index=0
 )
 
@@ -1672,6 +1672,654 @@ elif page == "🎨 Créateur de graphiques":
     #             st.error(f"Erreur: {str(e)}")
     # else:
     #     st.warning("Aucune donnée disponible pour cette table")
+
+elif page == "✏️ Gestion des données":
+    st.markdown("## ✏️ Gestion des données (CRUD)")
+    st.info("Créer, mettre à jour ou supprimer des enregistrements dans la base de données")
+    
+    # Sélection de l'action
+    col_action, col_table = st.columns(2)
+    
+    with col_action:
+        action = st.selectbox(
+            "Action à effectuer",
+            ["CREATE - Créer", "UPDATE - Modifier", "DELETE - Supprimer"],
+            help="Choisissez l'opération CRUD"
+        )
+        action_type = action.split(" - ")[0]
+    
+    with col_table:
+        table_options = {
+            "events": "Événements",
+            "persons": "Personnes",
+            "units": "Unités organisationnelles",
+            "measures": "Mesures correctives",
+            "risks": "Risques"
+        }
+        selected_table = st.selectbox(
+            "Table",
+            list(table_options.keys()),
+            format_func=lambda x: table_options[x],
+            help="Choisissez la table à modifier"
+        )
+    
+    st.markdown("---")
+    
+    # Fonction pour détecter le type de champ dynamiquement
+    def detect_field_type(field_name: str, sample_value) -> dict:
+        """Détecte automatiquement le type d'un champ basé sur son nom et sa valeur."""
+        field_name_lower = field_name.lower()
+        
+        # Primary key ID fields - readonly (event_id, person_id, etc.)
+        if field_name_lower in ['event_id', 'person_id', 'unit_id', 'measure_id', 'risk_id']:
+            return {"type": "number", "label": field_name.replace('_', ' ').title(), "readonly": True, "required": False}
+        
+        # Foreign key ID fields - required (declared_by_id, organizational_unit_id, owner_id)
+        if field_name_lower.endswith('_id') or field_name_lower == 'id':
+            return {"type": "number", "label": field_name.replace('_', ' ').title(), "readonly": False, "required": True}
+        
+        # Datetime fields
+        if 'datetime' in field_name_lower or 'date' in field_name_lower:
+            return {"type": "datetime", "label": field_name.replace('_', ' ').title(), "required": True}
+        
+        # Description fields - textarea
+        if 'description' in field_name_lower:
+            return {"type": "textarea", "label": field_name.replace('_', ' ').title(), "required": True}
+        
+        # Cost/Price fields - number with optional
+        if 'cost' in field_name_lower or 'price' in field_name_lower or 'amount' in field_name_lower:
+            return {"type": "number", "label": field_name.replace('_', ' ').title(), "required": False}
+        
+        # Detect based on sample value type
+        if sample_value is not None:
+            if isinstance(sample_value, (int, float)):
+                return {"type": "number", "label": field_name.replace('_', ' ').title(), "required": True}
+            elif isinstance(sample_value, str) and len(sample_value) > 100:
+                return {"type": "textarea", "label": field_name.replace('_', ' ').title(), "required": True}
+        
+        # Default to text
+        return {"type": "text", "label": field_name.replace('_', ' ').title(), "required": True}
+    
+    # Récupérer un exemple d'enregistrement pour détecter les champs dynamiquement
+    fields = {}
+    id_field = None
+    
+    try:
+        with st.spinner("🔍 Détection des champs..."):
+            response = requests.get(f"{BASE_URL}/{selected_table}/", params={"limit": 1}, timeout=5)
+            if response.status_code == 200:
+                records = response.json()
+                if records and len(records) > 0:
+                    sample_record = records[0]
+                    
+                    # Créer les champs dynamiquement
+                    for field_name, field_value in sample_record.items():
+                        fields[field_name] = detect_field_type(field_name, field_value)
+                    
+                    # Identifier le champ ID (premier champ avec _id ou id)
+                    for field_name in fields.keys():
+                        if field_name.lower().endswith('_id') or field_name.lower() == 'id':
+                            id_field = field_name
+                            break
+                    
+                    if not id_field:
+                        # Si aucun ID trouvé, prendre le premier champ
+                        id_field = list(fields.keys())[0]
+                    
+                    st.success(f"✅ {len(fields)} champs détectés automatiquement")
+                else:
+                    st.warning("⚠️ Aucun enregistrement dans la table. Impossible de détecter les champs automatiquement.")
+                    st.info("💡 Ajoutez au moins un enregistrement manuellement via l'API pour activer la détection automatique.")
+                    st.stop()
+            else:
+                st.error(f"❌ Erreur lors de la récupération des données: {response.status_code}")
+                st.stop()
+    except Exception as e:
+        st.error(f"❌ Erreur lors de la détection des champs: {str(e)}")
+        st.stop()
+    
+    # DELETE
+    if action_type == "DELETE":
+        st.markdown(f"### 🗑️ Supprimer un enregistrement de {table_options[selected_table]}")
+        
+        # Récupérer tous les enregistrements
+        try:
+            response = requests.get(f"{BASE_URL}/{selected_table}/", params={"limit": 1000}, timeout=5)
+            if response.status_code == 200:
+                records = response.json()
+                if records:
+                    # Créer un mapping ID -> description lisible
+                    record_options = {}
+                    for record in records:
+                        record_id = record[id_field]
+                        # Créer une description selon la table
+                        if selected_table == "events":
+                            desc = f"#{record_id} - {record.get('type', 'N/A')} ({record.get('classification', 'N/A')})"
+                        elif selected_table == "persons":
+                            desc = f"#{record_id} - {record.get('name', '')} {record.get('family_name', '')}"
+                        elif selected_table == "units":
+                            desc = f"#{record_id} - {record.get('name', 'N/A')}"
+                        elif selected_table == "measures":
+                            desc = f"#{record_id} - {record.get('name', 'N/A')}"
+                        elif selected_table == "risks":
+                            desc = f"#{record_id} - {record.get('name', 'N/A')}"
+                        record_options[record_id] = desc
+                    
+                    selected_id = st.selectbox(
+                        "Sélectionnez l'enregistrement à supprimer",
+                        list(record_options.keys()),
+                        format_func=lambda x: record_options[x]
+                    )
+                    
+                    # Afficher les détails de l'enregistrement
+                    selected_record = next(r for r in records if r[id_field] == selected_id)
+                    with st.expander("📋 Détails de l'enregistrement"):
+                        st.json(selected_record)
+                    
+                    st.warning("⚠️ Cette action est irréversible !")
+                    
+                    if st.button("🗑️ Confirmer la suppression", type="primary", use_container_width=True):
+                        try:
+                            delete_response = requests.delete(f"{BASE_URL}/{selected_table}/{selected_id}", timeout=5)
+                            if delete_response.status_code in [200, 204]:
+                                st.success(f"✅ Enregistrement #{selected_id} supprimé avec succès !")
+                                st.balloons()
+                                # Invalider le cache
+                                st.cache_data.clear()
+                                st.rerun()
+                            else:
+                                st.error(f"❌ Erreur lors de la suppression: HTTP {delete_response.status_code}")
+                                if delete_response.text:
+                                    st.error(f"Détails: {delete_response.text}")
+                        except Exception as e:
+                            st.error(f"❌ Erreur: {str(e)}")
+                else:
+                    st.info("Aucun enregistrement trouvé dans cette table")
+            else:
+                st.error(f"❌ Erreur lors de la récupération des données: {response.status_code}")
+        except Exception as e:
+            st.error(f"❌ Erreur: {str(e)}")
+    
+    # UPDATE
+    elif action_type == "UPDATE":
+        st.markdown(f"### ✏️ Modifier un enregistrement de {table_options[selected_table]}")
+        
+        # Charger les options pour les sélecteurs
+        @st.cache_data(ttl=60)
+        def get_selector_options(table_name):
+            """Récupère les données d'une table pour les sélecteurs"""
+            try:
+                resp = requests.get(f"{BASE_URL}/{table_name}/", params={"limit": 1000}, timeout=5)
+                if resp.status_code == 200:
+                    return resp.json()
+            except:
+                pass
+            return []
+        
+        # Récupérer tous les enregistrements
+        try:
+            response = requests.get(f"{BASE_URL}/{selected_table}/", params={"limit": 1000}, timeout=5)
+            if response.status_code == 200:
+                records = response.json()
+                if records:
+                    # Créer un mapping ID -> description lisible
+                    record_options = {}
+                    for record in records:
+                        record_id = record[id_field]
+                        if selected_table == "events":
+                            desc = f"#{record_id} - {record.get('type', 'N/A')}"
+                        elif selected_table == "persons":
+                            desc = f"#{record_id} - {record.get('name', '')} {record.get('family_name', '')}"
+                        elif selected_table == "units":
+                            desc = f"#{record_id} - {record.get('name', 'N/A')}"
+                        elif selected_table == "measures":
+                            desc = f"#{record_id} - {record.get('name', 'N/A')}"
+                        elif selected_table == "risks":
+                            desc = f"#{record_id} - {record.get('name', 'N/A')}"
+                        record_options[record_id] = desc
+                    
+                    selected_id = st.selectbox(
+                        "Sélectionnez l'enregistrement à modifier",
+                        list(record_options.keys()),
+                        format_func=lambda x: record_options[x]
+                    )
+                    
+                    # Récupérer l'enregistrement complet
+                    selected_record = next(r for r in records if r[id_field] == selected_id)
+                    
+                    # Charger les catégories existantes pour type et classification
+                    event_types = []
+                    event_classifications = []
+                    if selected_table == "events":
+                        all_events = get_selector_options("events")
+                        if all_events:
+                            event_types = sorted(list(set([e.get('type') for e in all_events if e.get('type')])))
+                            event_classifications = sorted(list(set([e.get('classification') for e in all_events if e.get('classification')])))
+                    
+                    st.markdown("#### Modifier les champs")
+                    
+                    # Formulaire avec les valeurs pré-remplies
+                    form_data = {}
+                    
+                    for field_name, field_info in fields.items():
+                        if field_info.get("readonly", False):
+                            st.text_input(field_info["label"], value=str(selected_record.get(field_name, "")), disabled=True)
+                            continue
+                        
+                        current_value = selected_record.get(field_name)
+                        
+                        # Sélecteurs pour les clés étrangères (*_id)
+                        if field_info["type"] == "number" and field_name.endswith('_id'):
+                            # Déterminer la table liée
+                            if 'unit' in field_name:
+                                ref_table = "units"
+                                ref_id = "unit_id"
+                                ref_label = lambda x: f"#{x['unit_id']} - {x.get('name', 'N/A')}"
+                            elif 'person' in field_name or 'owner' in field_name or 'declared_by' in field_name:
+                                ref_table = "persons"
+                                ref_id = "person_id"
+                                ref_label = lambda x: f"#{x['person_id']} - {x.get('name', '')} {x.get('family_name', '')}".strip()
+                            elif 'risk' in field_name:
+                                ref_table = "risks"
+                                ref_id = "risk_id"
+                                ref_label = lambda x: f"#{x['risk_id']} - {x.get('name', 'N/A')}"
+                            else:
+                                # Fallback: input numérique normal
+                                form_data[field_name] = st.number_input(
+                                    field_info["label"],
+                                    value=int(current_value) if current_value is not None else 0,
+                                    min_value=0,
+                                    step=1,
+                                    key=f"update_{field_name}"
+                                )
+                                continue
+                            
+                            # Charger les options
+                            options = get_selector_options(ref_table)
+                            if options:
+                                options_dict = {opt[ref_id]: ref_label(opt) for opt in options}
+                                # Trouver l'index de la valeur actuelle
+                                current_index = 0
+                                if current_value and current_value in options_dict:
+                                    current_index = list(options_dict.keys()).index(current_value)
+                                
+                                selected_id_val = st.selectbox(
+                                    field_info["label"],
+                                    list(options_dict.keys()),
+                                    format_func=lambda x: options_dict[x],
+                                    index=current_index,
+                                    key=f"update_{field_name}"
+                                )
+                                form_data[field_name] = selected_id_val
+                            else:
+                                st.warning(f"⚠️ Aucune donnée disponible pour {ref_table}")
+                                form_data[field_name] = st.number_input(
+                                    field_info["label"],
+                                    value=int(current_value) if current_value is not None else 0,
+                                    min_value=0,
+                                    step=1,
+                                    key=f"update_{field_name}"
+                                )
+                        
+                        # Sélecteurs pour type et classification dans events
+                        elif selected_table == "events" and field_name == "type":
+                            if event_types:
+                                # Vérifier si la valeur actuelle est dans la liste
+                                if current_value in event_types:
+                                    type_index = event_types.index(current_value)
+                                    all_types = event_types + ["[Autre]"]
+                                else:
+                                    # Valeur personnalisée existante
+                                    all_types = event_types + [current_value, "[Autre]"]
+                                    type_index = len(event_types)
+                                
+                                col_type, col_custom = st.columns([3, 1])
+                                with col_type:
+                                    selected_type = st.selectbox(
+                                        field_info["label"],
+                                        all_types,
+                                        index=type_index,
+                                        key=f"update_{field_name}_select"
+                                    )
+                                with col_custom:
+                                    if selected_type == "[Autre]":
+                                        custom_type = st.text_input(
+                                            "Type personnalisé",
+                                            value=current_value if current_value not in event_types else "",
+                                            key=f"update_{field_name}_custom"
+                                        )
+                                        form_data[field_name] = custom_type
+                                    else:
+                                        form_data[field_name] = selected_type
+                                        st.markdown("<br>", unsafe_allow_html=True)
+                            else:
+                                form_data[field_name] = st.text_input(
+                                    field_info["label"],
+                                    value=current_value if current_value is not None else "",
+                                    key=f"update_{field_name}"
+                                )
+                        
+                        elif selected_table == "events" and field_name == "classification":
+                            if event_classifications:
+                                # Vérifier si la valeur actuelle est dans la liste
+                                if current_value in event_classifications:
+                                    class_index = event_classifications.index(current_value)
+                                    all_classes = event_classifications + ["[Autre]"]
+                                else:
+                                    # Valeur personnalisée existante
+                                    all_classes = event_classifications + [current_value, "[Autre]"]
+                                    class_index = len(event_classifications)
+                                
+                                col_class, col_custom = st.columns([3, 1])
+                                with col_class:
+                                    selected_class = st.selectbox(
+                                        field_info["label"],
+                                        all_classes,
+                                        index=class_index,
+                                        key=f"update_{field_name}_select"
+                                    )
+                                with col_custom:
+                                    if selected_class == "[Autre]":
+                                        custom_class = st.text_input(
+                                            "Classification personnalisée",
+                                            value=current_value if current_value not in event_classifications else "",
+                                            key=f"update_{field_name}_custom"
+                                        )
+                                        form_data[field_name] = custom_class
+                                    else:
+                                        form_data[field_name] = selected_class
+                                        st.markdown("<br>", unsafe_allow_html=True)
+                            else:
+                                form_data[field_name] = st.text_input(
+                                    field_info["label"],
+                                    value=current_value if current_value is not None else "",
+                                    key=f"update_{field_name}"
+                                )
+                        
+                        # Champs texte normaux
+                        elif field_info["type"] == "text":
+                            form_data[field_name] = st.text_input(
+                                field_info["label"],
+                                value=current_value if current_value is not None else "",
+                                key=f"update_{field_name}"
+                            )
+                        elif field_info["type"] == "textarea":
+                            form_data[field_name] = st.text_area(
+                                field_info["label"],
+                                value=current_value if current_value is not None else "",
+                                height=100,
+                                key=f"update_{field_name}"
+                            )
+                        elif field_info["type"] == "number":
+                            form_data[field_name] = st.number_input(
+                                field_info["label"],
+                                value=float(current_value) if current_value is not None else 0.0,
+                                key=f"update_{field_name}"
+                            )
+                        elif field_info["type"] == "datetime":
+                            if current_value:
+                                try:
+                                    dt_value = pd.to_datetime(current_value)
+                                    col_date, col_time = st.columns(2)
+                                    with col_date:
+                                        date_value = st.date_input(
+                                            f"{field_info['label']} - Date",
+                                            value=dt_value.date(),
+                                            key=f"update_{field_name}_date"
+                                        )
+                                    with col_time:
+                                        time_value = st.time_input(
+                                            f"{field_info['label']} - Heure",
+                                            value=dt_value.time(),
+                                            key=f"update_{field_name}_time"
+                                        )
+                                    form_data[field_name] = datetime.combine(date_value, time_value).isoformat()
+                                except:
+                                    form_data[field_name] = st.text_input(
+                                        field_info["label"],
+                                        value=current_value,
+                                        key=f"update_{field_name}"
+                                    )
+                            else:
+                                col_date, col_time = st.columns(2)
+                                with col_date:
+                                    date_value = st.date_input(
+                                        f"{field_info['label']} - Date",
+                                        key=f"update_{field_name}_date"
+                                    )
+                                with col_time:
+                                    time_value = st.time_input(
+                                        f"{field_info['label']} - Heure",
+                                        key=f"update_{field_name}_time"
+                                    )
+                                form_data[field_name] = datetime.combine(date_value, time_value).isoformat()
+                    
+                    if st.button("💾 Enregistrer les modifications", type="primary", use_container_width=True):
+                        # Valider les champs requis
+                        missing_fields = [fields[k]["label"] for k, v in fields.items() 
+                                        if v.get("required") and not form_data.get(k)]
+                        
+                        if missing_fields:
+                            st.error(f"❌ Champs requis manquants: {', '.join(missing_fields)}")
+                        else:
+                            try:
+                                update_response = requests.put(
+                                    f"{BASE_URL}/{selected_table}/{selected_id}",
+                                    json=form_data,
+                                    timeout=5
+                                )
+                                if update_response.status_code == 200:
+                                    st.success(f"✅ Enregistrement #{selected_id} modifié avec succès !")
+                                    st.balloons()
+                                    st.cache_data.clear()
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ Erreur: {update_response.status_code} - {update_response.text}")
+                            except Exception as e:
+                                st.error(f"❌ Erreur: {str(e)}")
+                else:
+                    st.info("Aucun enregistrement trouvé dans cette table")
+            else:
+                st.error(f"❌ Erreur lors de la récupération des données: {response.status_code}")
+        except Exception as e:
+            st.error(f"❌ Erreur: {str(e)}")
+    
+    # CREATE
+    elif action_type == "CREATE":
+        st.markdown(f"### ➕ Créer un nouvel enregistrement dans {table_options[selected_table]}")
+        
+        # Charger les options pour les sélecteurs
+        @st.cache_data(ttl=60)
+        def get_selector_options(table_name):
+            """Récupère les données d'une table pour les sélecteurs"""
+            try:
+                resp = requests.get(f"{BASE_URL}/{table_name}/", params={"limit": 1000}, timeout=5)
+                if resp.status_code == 200:
+                    return resp.json()
+            except:
+                pass
+            return []
+        
+        # Charger les catégories existantes pour type et classification
+        event_types = []
+        event_classifications = []
+        if selected_table == "events":
+            all_events = get_selector_options("events")
+            if all_events:
+                event_types = sorted(list(set([e.get('type') for e in all_events if e.get('type')])))
+                event_classifications = sorted(list(set([e.get('classification') for e in all_events if e.get('classification')])))
+        
+        form_data = {}
+        
+        for field_name, field_info in fields.items():
+            if field_info.get("readonly", False):
+                continue
+            
+            # Sélecteurs pour les clés étrangères (*_id)
+            if field_info["type"] == "number" and field_name.endswith('_id'):
+                # Déterminer la table liée
+                if 'unit' in field_name:
+                    ref_table = "units"
+                    ref_id = "unit_id"
+                    ref_label = lambda x: f"#{x['unit_id']} - {x.get('name', 'N/A')}"
+                elif 'person' in field_name or 'owner' in field_name or 'declared_by' in field_name:
+                    ref_table = "persons"
+                    ref_id = "person_id"
+                    ref_label = lambda x: f"#{x['person_id']} - {x.get('name', '')} {x.get('family_name', '')}".strip()
+                elif 'risk' in field_name:
+                    ref_table = "risks"
+                    ref_id = "risk_id"
+                    ref_label = lambda x: f"#{x['risk_id']} - {x.get('name', 'N/A')}"
+                else:
+                    # Fallback: input numérique normal
+                    form_data[field_name] = st.number_input(
+                        f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                        value=0,
+                        min_value=0,
+                        step=1,
+                        key=f"create_{field_name}"
+                    )
+                    continue
+                
+                # Charger les options
+                options = get_selector_options(ref_table)
+                if options:
+                    options_dict = {opt[ref_id]: ref_label(opt) for opt in options}
+                    selected_id = st.selectbox(
+                        f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                        list(options_dict.keys()),
+                        format_func=lambda x: options_dict[x],
+                        key=f"create_{field_name}"
+                    )
+                    form_data[field_name] = selected_id
+                else:
+                    st.warning(f"⚠️ Aucune donnée disponible pour {ref_table}")
+                    form_data[field_name] = st.number_input(
+                        f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                        value=0,
+                        min_value=0,
+                        step=1,
+                        key=f"create_{field_name}"
+                    )
+            
+            # Sélecteurs pour type et classification dans events
+            elif selected_table == "events" and field_name == "type":
+                if event_types:
+                    col_type, col_custom = st.columns([3, 1])
+                    with col_type:
+                        selected_type = st.selectbox(
+                            f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                            event_types + ["[Autre]"],
+                            key=f"create_{field_name}_select"
+                        )
+                    with col_custom:
+                        if selected_type == "[Autre]":
+                            custom_type = st.text_input(
+                                "Type personnalisé",
+                                key=f"create_{field_name}_custom"
+                            )
+                            form_data[field_name] = custom_type
+                        else:
+                            form_data[field_name] = selected_type
+                            st.markdown("<br>", unsafe_allow_html=True)
+                else:
+                    form_data[field_name] = st.text_input(
+                        f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                        key=f"create_{field_name}"
+                    )
+            
+            elif selected_table == "events" and field_name == "classification":
+                if event_classifications:
+                    col_class, col_custom = st.columns([3, 1])
+                    with col_class:
+                        selected_class = st.selectbox(
+                            f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                            event_classifications + ["[Autre]"],
+                            key=f"create_{field_name}_select"
+                        )
+                    with col_custom:
+                        if selected_class == "[Autre]":
+                            custom_class = st.text_input(
+                                "Classification personnalisée",
+                                key=f"create_{field_name}_custom"
+                            )
+                            form_data[field_name] = custom_class
+                        else:
+                            form_data[field_name] = selected_class
+                            st.markdown("<br>", unsafe_allow_html=True)
+                else:
+                    form_data[field_name] = st.text_input(
+                        f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                        key=f"create_{field_name}"
+                    )
+            
+            # Champs texte normaux
+            elif field_info["type"] == "text":
+                form_data[field_name] = st.text_input(
+                    f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                    key=f"create_{field_name}"
+                )
+            elif field_info["type"] == "textarea":
+                form_data[field_name] = st.text_area(
+                    f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                    height=100,
+                    key=f"create_{field_name}"
+                )
+            elif field_info["type"] == "number":
+                form_data[field_name] = st.number_input(
+                    f"{field_info['label']}" + (" *" if field_info.get("required") else ""),
+                    value=0.0,
+                    key=f"create_{field_name}"
+                )
+            elif field_info["type"] == "datetime":
+                col_date, col_time = st.columns(2)
+                with col_date:
+                    date_value = st.date_input(
+                        f"{field_info['label']} - Date" + (" *" if field_info.get("required") else ""),
+                        key=f"create_{field_name}_date"
+                    )
+                with col_time:
+                    time_value = st.time_input(
+                        f"{field_info['label']} - Heure" + (" *" if field_info.get("required") else ""),
+                        key=f"create_{field_name}_time"
+                    )
+                form_data[field_name] = datetime.combine(date_value, time_value).isoformat()
+        
+        st.markdown("*\* Champs obligatoires*")
+        
+        if st.button("➕ Créer l'enregistrement", type="primary", use_container_width=True):
+            # Valider les champs requis
+            missing_fields = [fields[k]["label"] for k, v in fields.items() 
+                            if v.get("required") and not form_data.get(k)]
+            
+            if missing_fields:
+                st.error(f"❌ Champs requis manquants: {', '.join(missing_fields)}")
+            else:
+                try:
+                    create_response = requests.post(
+                        f"{BASE_URL}/{selected_table}/",
+                        json=form_data,
+                        timeout=5
+                    )
+                    if create_response.status_code == 201:
+                        new_record = create_response.json()
+                        created_id = new_record.get(id_field)
+                        
+                        # Afficher l'ID créé en grand
+                        st.success(f"✅ Enregistrement créé avec succès !")
+                        st.markdown(f"### 🎯 ID créé: **{created_id}**")
+                        st.balloons()
+                        
+                        # Afficher les détails
+                        with st.expander("📋 Détails du nouvel enregistrement", expanded=True):
+                            st.json(new_record)
+                        
+                        # Invalider le cache
+                        st.cache_data.clear()
+                    else:
+                        st.error(f"❌ Erreur: {create_response.status_code} - {create_response.text}")
+                except Exception as e:
+                    st.error(f"❌ Erreur: {str(e)}")
 
 # Footer
 st.markdown("<br><br>", unsafe_allow_html=True)
