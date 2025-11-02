@@ -6,18 +6,70 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from chatbot_integration import render_chatbot
 
 # Configuration de la page
 st.set_page_config(
     page_title="Safety Analytics Dashboard", 
     layout="wide", 
-    initial_sidebar_state="collapsed",
-    page_icon="�"
+    initial_sidebar_state="expanded",
+    page_icon="📊"
 )
 
 # Custom CSS pour un design moderne et professionnel - v2.0
 st.markdown("""
 <style>
+    /* Force la sidebar à rester ouverte */
+    section[data-testid="stSidebar"] {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* Masquer le bouton de fermeture de la sidebar - toutes les variantes */
+    button[kind="header"],
+    section[data-testid="stSidebar"] button[kind="headerNoPadding"],
+    section[data-testid="stSidebar"] > div > button,
+    [data-testid="collapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Masquer les boutons radio (bulles) dans la sidebar */
+    section[data-testid="stSidebar"] input[type="radio"] {
+        display: none !important;
+    }
+    
+    /* Masquer complètement les cercles/ronds des radio buttons */
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
+        display: none !important;
+    }
+    
+    section[data-testid="stSidebar"] [role="radio"] {
+        display: none !important;
+    }
+    
+    /* Style des labels de navigation pour qu'ils ressemblent à des boutons */
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] {
+        cursor: pointer !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+        background: transparent !important;
+        margin: 0.25rem 0 !important;
+    }
+    
+    section[data-testid="stSidebar"] label[data-baseweb="radio"]:hover {
+        background: rgba(99, 102, 241, 0.1) !important;
+    }
+    
+    /* Style pour l'élément sélectionné */
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] div[data-checked="true"] {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+        color: white !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+    }
+    
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
@@ -390,6 +442,25 @@ ENDPOINTS = infos["endpoints"].copy()
 if "docs" in ENDPOINTS:
     del ENDPOINTS["docs"]
 
+# === SIDEBAR POUR NAVIGATION ===
+st.sidebar.title("📊 Navigation")
+st.sidebar.markdown("---")
+
+# Menu de navigation dans la sidebar
+page = st.sidebar.radio(
+    "Sélectionnez une page :",
+    ["🤖 Assistant IA", "🏠 Vue d'ensemble", "📅 Événements récents", "📊 Statistiques", "🔍 Analyses détaillées", "🎨 Créateur de graphiques"],
+    index=0
+)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style='font-size: 0.8rem; color: #94a3b8;'>
+    <p><b>Safety Analytics Dashboard</b></p>
+    <p>Powered by Streamlit & Plotly</p>
+</div>
+""", unsafe_allow_html=True)
+
 # Fonctions helper pour récupérer les noms depuis l'API
 @st.cache_data(ttl=300)  # Cache pendant 5 minutes
 def get_units_mapping():
@@ -518,17 +589,15 @@ with st.spinner("🔄 Chargement du dashboard..."):
             lambda x: units_map.get(x, f"Unit {x}") if pd.notna(x) else "Non spécifié"
         )
 
-# === TABS POUR ORGANISATION DU CONTENU ===
-st.markdown("<br>", unsafe_allow_html=True)
+# === CONTENU EN FONCTION DE LA PAGE SÉLECTIONNÉE ===
 
-tab1, tab2, tab0, tab3, tab4 = st.tabs(["Vue d'ensemble", "Événements récents", "Statistiques", "Analyses détaillées", "Créateur de graphiques"])
+if page == "🤖 Assistant IA":
+    render_chatbot()
 
-with tab0:
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Indicateurs Clés de Performance</div>', unsafe_allow_html=True)
+elif page == "📊 Statistiques":
+    st.markdown("## 📊 Indicateurs Clés de Performance")
     
     # === KPIs ===
-    st.markdown('<div class="kpi-container">', unsafe_allow_html=True)
     kpi_cols = st.columns(3)
 
     with kpi_cols[0]:
@@ -581,7 +650,7 @@ with tab0:
             unique_units = df_events['unit_name'].nunique()
             st.metric("Nombre d'unités", f"{unique_units}", f"Sur {len(df_units)} total")
 
-with tab1:
+elif page == "🏠 Vue d'ensemble":
     st.markdown("## Vue d'ensemble des événements")
     
     if not df_events.empty:
@@ -685,7 +754,7 @@ with tab1:
                 )
                 st.plotly_chart(fig4, use_container_width=True)
 
-with tab2:
+elif page == "📅 Événements récents":
     st.markdown("## Événements récents")
     
     # Contrôles en haut
@@ -827,7 +896,7 @@ with tab2:
     else:
         st.info("Aucun événement récent à afficher")
 
-with tab3:
+elif page == "🔍 Analyses détaillées":
     st.markdown("## Analyses détaillées par catégorie")
     
     # Sous-tabs pour différentes analyses
@@ -969,10 +1038,13 @@ with tab3:
                     st.plotly_chart(fig, use_container_width=True)
     
 
-with tab4:
-        # === CRÉATEUR DE GRAPHIQUES PERSONNALISÉS ===
+elif page == "🎨 Créateur de graphiques":
+    # === CRÉATEUR DE GRAPHIQUES PERSONNALISÉS ===
     st.markdown("---")
     st.subheader("Créateur de graphiques personnalisés")
+    
+    # Initialiser date_columns
+    date_columns = []
     
     # Sélecteur de table source
     st.markdown("**Sélectionner la source des données**")
@@ -1007,22 +1079,24 @@ with tab4:
                 lambda x: persons_map.get(x, f"Person {x}") if pd.notna(x) else None
             )
         
+        # Identifier et convertir les colonnes de dates
+        date_columns = []
+        for col in df_custom.columns:
+            if col in ['extracted_date', 'start_datetime', 'end_datetime', 'creation_date', 'update_date', 'date', 'datetime']:
+                # Convertir en datetime et garder le type datetime
+                df_custom[col] = pd.to_datetime(df_custom[col], errors='coerce')
+                date_columns.append(col)
+        
         # Extraire le jour de la semaine depuis extracted_date
         if 'extracted_date' in df_custom.columns:
-            df_custom['extracted_date_temp'] = pd.to_datetime(df_custom['extracted_date'], errors='coerce')
-            df_custom['extracted_weekday'] = df_custom['extracted_date_temp'].dt.day_name()
-            df_custom = df_custom.drop('extracted_date_temp', axis=1)
+            df_custom['extracted_weekday'] = df_custom['extracted_date'].dt.day_name()
         
         # Extraire le jour de la semaine depuis start_datetime et end_datetime
         if 'start_datetime' in df_custom.columns:
-            df_custom['start_datetime_temp'] = pd.to_datetime(df_custom['start_datetime'], errors='coerce')
-            df_custom['start_weekday'] = df_custom['start_datetime_temp'].dt.day_name()
-            df_custom = df_custom.drop('start_datetime_temp', axis=1)
+            df_custom['start_weekday'] = df_custom['start_datetime'].dt.day_name()
         
         if 'end_datetime' in df_custom.columns:
-            df_custom['end_datetime_temp'] = pd.to_datetime(df_custom['end_datetime'], errors='coerce')
-            df_custom['end_weekday'] = df_custom['end_datetime_temp'].dt.day_name()
-            df_custom = df_custom.drop('end_datetime_temp', axis=1)
+            df_custom['end_weekday'] = df_custom['end_datetime'].dt.day_name()
         
         # Nettoyer extracted_shift
         if 'extracted_shift' in df_custom.columns:
@@ -1252,6 +1326,13 @@ with tab4:
                 st.error("❌ Pas assez de données (minimum 2 lignes)")
                 st.stop()
             
+            # Détecter si x_axis est une colonne de date et la trier
+            is_x_date = False
+            if x_axis and x_axis in date_columns:
+                is_x_date = True
+                df_plot = df_plot.sort_values(by=x_axis)
+                st.info(f"📅 Colonne de date détectée: tri chronologique appliqué sur {x_axis}")
+            
             # Créer le graphique selon le type
             if chart_type == "Bar Chart":
                 # Nettoyer les données
@@ -1262,7 +1343,8 @@ with tab4:
                     st.stop()
                 
                 # Limiter le nombre de catégories pour éviter les graphiques surchargés
-                if df_plot[x_axis].nunique() > 50:
+                # Mais seulement si ce n'est pas une date
+                if not is_x_date and df_plot[x_axis].nunique() > 50:
                     st.warning(f"⚠️ Trop de catégories ({df_plot[x_axis].nunique()}). Affichage des 30 premières.")
                     top_categories = df_plot[x_axis].value_counts().head(30).index
                     df_plot = df_plot[df_plot[x_axis].isin(top_categories)]
@@ -1283,6 +1365,10 @@ with tab4:
                         df_plot = df_plot.groupby(group_cols)[y_axis].min().reset_index()
                     elif aggregation == "Max":
                         df_plot = df_plot.groupby(group_cols)[y_axis].max().reset_index()
+                    
+                    # Re-trier par date après l'agrégation si nécessaire
+                    if is_x_date:
+                        df_plot = df_plot.sort_values(by=x_axis)
                 
                 # Déterminer le label de l'axe Y
                 y_label = f"{aggregation} {y_axis}" if aggregation != "Aucune" else y_axis
@@ -1290,6 +1376,10 @@ with tab4:
                 fig = px.bar(df_plot, x=x_axis, y=y_axis, color=color_column, 
                             title=chart_title, height=chart_height,
                             labels={y_axis: y_label})
+                
+                # Si c'est une date, formater l'axe X
+                if is_x_date:
+                    fig.update_xaxes(tickformat="%Y-%m-%d", tickangle=-45)
                 
                 # Personnaliser le hover template
                 if aggregation != "Aucune":
@@ -1319,6 +1409,10 @@ with tab4:
                         df_plot = df_plot.groupby(group_cols)[y_axis].mean().reset_index()
                     elif aggregation == "Nombre de":
                         df_plot = df_plot.groupby(group_cols).size().reset_index(name=y_axis)
+                    
+                    # Re-trier par date après l'agrégation si nécessaire
+                    if is_x_date:
+                        df_plot = df_plot.sort_values(by=x_axis)
                 
                 # Déterminer le label de l'axe Y
                 y_label = f"{aggregation} {y_axis}" if aggregation != "Aucune" else y_axis
@@ -1326,6 +1420,10 @@ with tab4:
                 fig = px.line(df_plot, x=x_axis, y=y_axis, color=color_column,
                                 title=chart_title, height=chart_height,
                                 labels={y_axis: y_label})
+                
+                # Si c'est une date, formater l'axe X
+                if is_x_date:
+                    fig.update_xaxes(tickformat="%Y-%m-%d", tickangle=-45)
                 
                 # Personnaliser le hover template
                 if aggregation != "Aucune":

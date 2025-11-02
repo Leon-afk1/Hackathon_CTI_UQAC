@@ -65,10 +65,14 @@ services:
       - "8502:8502"              # host:container
     volumes:
       - ./streamlit/app:/app      # mount your Streamlit code for live reload
+      - ./backend/chatbot:/app/../backend/chatbot  # mount chatbot modules
     environment:
+      - POSTGRES_HOST=db
       - POSTGRES_USER=monuser
       - POSTGRES_PASSWORD=monpassword
       - POSTGRES_DB=madb
+      - GEMINI_API_KEY=${GEMINI_API_KEY}  # Add Gemini API key
+      - CHROME_BIN=/usr/bin/chromium  # Tell Kaleido where to find Chromium
     depends_on:
       - db
     networks:

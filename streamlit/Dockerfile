@@ -2,7 +2,13 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install dependencies
+# Install Chromium for Kaleido (needed for Plotly image export)
+RUN apt-get update && apt-get install -y \
+    chromium \
+    chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
 COPY app/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
