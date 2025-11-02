@@ -12,13 +12,64 @@ from chatbot_integration import render_chatbot
 st.set_page_config(
     page_title="Safety Analytics Dashboard", 
     layout="wide", 
-    initial_sidebar_state="collapsed",
-    page_icon="�"
+    initial_sidebar_state="expanded",
+    page_icon="📊"
 )
 
 # Custom CSS pour un design moderne et professionnel - v2.0
 st.markdown("""
 <style>
+    /* Force la sidebar à rester ouverte */
+    section[data-testid="stSidebar"] {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* Masquer le bouton de fermeture de la sidebar - toutes les variantes */
+    button[kind="header"],
+    section[data-testid="stSidebar"] button[kind="headerNoPadding"],
+    section[data-testid="stSidebar"] > div > button,
+    [data-testid="collapsedControl"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Masquer les boutons radio (bulles) dans la sidebar */
+    section[data-testid="stSidebar"] input[type="radio"] {
+        display: none !important;
+    }
+    
+    /* Masquer complètement les cercles/ronds des radio buttons */
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] > div:first-child {
+        display: none !important;
+    }
+    
+    section[data-testid="stSidebar"] [role="radio"] {
+        display: none !important;
+    }
+    
+    /* Style des labels de navigation pour qu'ils ressemblent à des boutons */
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] {
+        cursor: pointer !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+        background: transparent !important;
+        margin: 0.25rem 0 !important;
+    }
+    
+    section[data-testid="stSidebar"] label[data-baseweb="radio"]:hover {
+        background: rgba(99, 102, 241, 0.1) !important;
+    }
+    
+    /* Style pour l'élément sélectionné */
+    section[data-testid="stSidebar"] label[data-baseweb="radio"] div[data-checked="true"] {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+        color: white !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+    }
+    
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
@@ -391,6 +442,25 @@ ENDPOINTS = infos["endpoints"].copy()
 if "docs" in ENDPOINTS:
     del ENDPOINTS["docs"]
 
+# === SIDEBAR POUR NAVIGATION ===
+st.sidebar.title("📊 Navigation")
+st.sidebar.markdown("---")
+
+# Menu de navigation dans la sidebar
+page = st.sidebar.radio(
+    "Sélectionnez une page :",
+    ["🤖 Assistant IA", "🏠 Vue d'ensemble", "📅 Événements récents", "📊 Statistiques", "🔍 Analyses détaillées", "🎨 Créateur de graphiques"],
+    index=0
+)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("""
+<div style='font-size: 0.8rem; color: #94a3b8;'>
+    <p><b>Safety Analytics Dashboard</b></p>
+    <p>Powered by Streamlit & Plotly</p>
+</div>
+""", unsafe_allow_html=True)
+
 # Fonctions helper pour récupérer les noms depuis l'API
 @st.cache_data(ttl=300)  # Cache pendant 5 minutes
 def get_units_mapping():
@@ -519,12 +589,12 @@ with st.spinner("🔄 Chargement du dashboard..."):
             lambda x: units_map.get(x, f"Unit {x}") if pd.notna(x) else "Non spécifié"
         )
 
-# === TABS POUR ORGANISATION DU CONTENU ===
-st.markdown("<br>", unsafe_allow_html=True)
+# === CONTENU EN FONCTION DE LA PAGE SÉLECTIONNÉE ===
 
-tab1, tab2, tab0, tab3, tab4, tab5 = st.tabs(["Vue d'ensemble", "Événements récents", "Statistiques", "Analyses détaillées", "Créateur de graphiques", "Assistant IA"])
+if page == "🤖 Assistant IA":
+    render_chatbot()
 
-with tab0:
+elif page == "📊 Statistiques":
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Indicateurs Clés de Performance</div>', unsafe_allow_html=True)
     
@@ -582,7 +652,7 @@ with tab0:
             unique_units = df_events['unit_name'].nunique()
             st.metric("Nombre d'unités", f"{unique_units}", f"Sur {len(df_units)} total")
 
-with tab1:
+elif page == "🏠 Vue d'ensemble":
     st.markdown("## Vue d'ensemble des événements")
     
     if not df_events.empty:
@@ -686,7 +756,7 @@ with tab1:
                 )
                 st.plotly_chart(fig4, use_container_width=True)
 
-with tab2:
+elif page == "📅 Événements récents":
     st.markdown("## Événements récents")
     
     # Contrôles en haut
@@ -828,7 +898,7 @@ with tab2:
     else:
         st.info("Aucun événement récent à afficher")
 
-with tab3:
+elif page == "🔍 Analyses détaillées":
     st.markdown("## Analyses détaillées par catégorie")
     
     # Sous-tabs pour différentes analyses
@@ -970,8 +1040,8 @@ with tab3:
                     st.plotly_chart(fig, use_container_width=True)
     
 
-with tab4:
-        # === CRÉATEUR DE GRAPHIQUES PERSONNALISÉS ===
+elif page == "🎨 Créateur de graphiques":
+    # === CRÉATEUR DE GRAPHIQUES PERSONNALISÉS ===
     st.markdown("---")
     st.subheader("Créateur de graphiques personnalisés")
     
@@ -1583,9 +1653,6 @@ with tab4:
     #             st.error(f"Erreur: {str(e)}")
     # else:
     #     st.warning("Aucune donnée disponible pour cette table")
-
-with tab5:
-    render_chatbot()
 
 # Footer
 st.markdown("<br><br>", unsafe_allow_html=True)

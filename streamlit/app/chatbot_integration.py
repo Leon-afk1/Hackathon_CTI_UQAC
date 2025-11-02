@@ -207,7 +207,19 @@ fig.update_layout(template='plotly_white')
         # Initialisation des sessions states
         if "chatbot_messages" not in st.session_state:
             st.session_state.chatbot_messages = []
-            welcome_message = """### 👋 Assistant Événements
+        
+        # Vérifier si le message de bienvenue doit être mis à jour (migration)
+        if len(st.session_state.chatbot_messages) == 0 or (
+            len(st.session_state.chatbot_messages) > 0 and 
+            "### 👋 Assistant Événements" in st.session_state.chatbot_messages[0].get("content", "")
+        ):
+            # Nettoyer l'ancien message si présent
+            if len(st.session_state.chatbot_messages) > 0 and "### 👋 Assistant Événements" in st.session_state.chatbot_messages[0].get("content", ""):
+                st.session_state.chatbot_messages.pop(0)
+            
+            # Ajouter le nouveau message de bienvenue
+            if len(st.session_state.chatbot_messages) == 0:
+                welcome_message = """👋 **Bienvenue !**
 
 Je réponds rapidement à vos questions sur:
 - 📋 Événements & incidents
@@ -222,10 +234,10 @@ Je réponds rapidement à vos questions sur:
 
 **Pose ta question !** 🚀
 """
-            st.session_state.chatbot_messages.append({
-                "role": "assistant",
-                "content": welcome_message
-            })
+                st.session_state.chatbot_messages.append({
+                    "role": "assistant",
+                    "content": welcome_message
+                })
         
         if "chatbot_history" not in st.session_state:
             st.session_state.chatbot_history = []
