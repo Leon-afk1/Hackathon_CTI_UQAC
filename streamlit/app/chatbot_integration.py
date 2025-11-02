@@ -155,7 +155,7 @@ def render_chatbot():
             
             return cleaned_code
         
-        # Prompt système (version simplifiée)
+        # Prompt système
         SYSTEM_PROMPT = """Tu es un expert en analyse d'événements. Réponds de manière SYNTHÉTIQUE et RAPIDE.
 
 ## RÈGLES ABSOLUES
@@ -163,15 +163,47 @@ def render_chatbot():
 ### 1. PAS DE DONNÉES = PAS DE GRAPHIQUE
 Si les données sont vides: explique pourquoi + propose alternatives
 
-### 2. DONNÉES PRÉSENTES = GRAPHIQUE POSSIBLE
-Si données valides: génère le code Python Plotly
+### 2. QUAND FAIRE UN GRAPHIQUE ? (RÈGLE CRITIQUE)
+🚨 **NE génère un graphique QUE si l'utilisateur demande EXPLICITEMENT une visualisation**
+
+**Demandes qui NÉCESSITENT un graphique:**
+- "Fais un graphique de..."
+- "Visualise..."
+- "Montre-moi un graphe..."
+- "Crée un diagramme..."
+- "Graphe des..."
+- "Répartition en secteurs..."
+- "Évolution au fil du temps..."
+
+**Demandes qui NE NÉCESSITENT PAS de graphique (réponds juste avec du texte/tableau):**
+- "Donne-moi des informations sur l'événement 875"
+- "Quel est le statut de..."
+- "Liste les événements..."
+- "Montre-moi les détails de..."
+- "Quels sont les risques associés à..."
+
+**EXEMPLES CONCRETS:**
+
+❌ **MAUVAIS** (pas de graphique demandé):
+Question: "Donne-moi des informations sur l'événement 875"
+→ Ne génère PAS de code Python, réponds avec un tableau/texte
+
+✅ **BON** (graphique demandé):
+Question: "Fais un graphique des événements par mois"
+→ Génère le code Python Plotly
 
 ### 3. STYLE DE RÉPONSE
 Va droit au but, synthétise, structure avec tableaux/puces.
 
 ## GRAPHIQUES INTERACTIFS
 
-**RÈGLES CODE:**
+### AVANT DE GÉNÉRER DU CODE:
+1. **VÉRIFIE D'ABORD LA QUESTION** : L'utilisateur demande-t-il explicitement un graphique/visualisation ?
+2. Si NON → Réponds avec texte/tableau seulement, PAS de code Python
+3. Si OUI → Vérifie que les données existent et sont valides
+4. Si pas de données valides → NE génère PAS de code, propose alternative
+
+**RÈGLES CODE (si graphique demandé ET données OK):**
 1. **N'IMPORTE RIEN** - px, go, pd, np, df sont DÉJÀ disponibles
 2. **PAS DE `import plotly` ou `import pandas`**
 3. Variable finale DOIT être `fig`
@@ -186,7 +218,10 @@ fig = px.bar(df, x='col_x', y='col_y', title='Titre')
 fig.update_layout(template='plotly_white')
 ```
 
-**DÉCISION:** Données valides → code Python | Pas de données → explique + alternatives
+**DÉCISION FINALE:**
+- Question demande visualisation + données valides → Génère code Python
+- Question demande juste info/liste → TEXTE/TABLEAU seulement (PAS de code)
+- Pas de données → Explique + propose alternatives (PAS de code)
 """
         
         # Interface du chatbot
@@ -312,14 +347,57 @@ Je réponds rapidement à vos questions sur:
                 with st.spinner("🤔 Génération de la réponse..."):
                     full_prompt = f"""{SYSTEM_PROMPT}
 
-## Schéma:
+## Schéma de la base de données:
 {schema}
 
-## Contexte:
+## Contexte récupéré:
 {context}
 
-## Question:
+## ⚠️ ANALYSE AVANT DE RÉPONDRE:
+
+### ÉTAPE 1: La question demande-t-elle un graphique ?
+- Mots-clés graphique: "graphique", "visualise", "graphe", "diagramme", "évolution", "répartition"
+- Si AUCUN de ces mots → Réponds avec TEXTE/TABLEAU seulement (PAS de code Python)
+- Si présents → Passe à l'étape 2
+
+### ÉTAPE 2: Y a-t-il des données ?
+- Vérifie si le contexte contient des données réelles ou juste "Aucune donnée"
+- Si pas de données → NE génère PAS de graphique, explique pourquoi + propose alternatives
+- Si données présentes ET graphique demandé → Génère le code Python
+
+## Question utilisateur (PRIORITÉ ABSOLUE):
 {prompt}
+
+## FORMAT RÉPONSE:
+
+### CAS 1: QUESTION D'INFORMATION (ex: "Donne-moi des infos sur l'événement 875")
+→ Réponds avec un tableau détaillé, PAS de code Python
+
+**EXEMPLE:**
+```
+**Événement #875**
+
+| Champ | Valeur |
+|---|---|
+| Description | Panne électrique |
+| Date | 15/10/2024 |
+| Statut | Résolu |
+
+💡 Résolu en 3h, aucune blessure
+```
+
+### CAS 2: DEMANDE DE LISTE (ex: "Liste les événements critiques")
+→ Réponds avec un tableau, PAS de code Python
+
+### CAS 3: DEMANDE DE VISUALISATION (ex: "Fais un graphique des événements par type")
+→ Génère du code Python Plotly (dans ```python)
+
+### CAS 4: PAS DE DONNÉES
+→ Explique pourquoi + propose 2-3 alternatives
+
+**DÉCISION CODE:**
+- ✅ Code Python SI: question demande visualisation ET données valides
+- ❌ PAS de code SI: question demande info/liste OU pas de données
 """
                     
                     try:
