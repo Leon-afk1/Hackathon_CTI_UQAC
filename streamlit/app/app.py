@@ -595,11 +595,9 @@ if page == "🤖 Assistant IA":
     render_chatbot()
 
 elif page == "📊 Statistiques":
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Indicateurs Clés de Performance</div>', unsafe_allow_html=True)
+    st.markdown("## 📊 Indicateurs Clés de Performance")
     
     # === KPIs ===
-    st.markdown('<div class="kpi-container">', unsafe_allow_html=True)
     kpi_cols = st.columns(3)
 
     with kpi_cols[0]:
