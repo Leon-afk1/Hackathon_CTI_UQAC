@@ -195,24 +195,7 @@ Question: "Fais un graphique des événements par mois"
 ### 3. STYLE DE RÉPONSE
 Va droit au but, synthétise, structure avec tableaux/puces.
 
-### 4. 💡 SUGGESTIONS DE VISUALISATIONS
-**TOUJOURS** terminer ta réponse par des suggestions de visualisations pertinentes si des données sont présentes.
-
-**Format des suggestions:**
-```
-💡 **Visualisations suggérées:**
-- "Fais un graphique de [type] par [dimension]"
-- "Visualise l'évolution de [métrique] au fil du temps"
-- "Montre-moi un diagramme en secteurs de [répartition]"
-```
-
-**Exemples selon le contexte:**
-- Si liste d'événements → suggérer graphique par type, par mois, par gravité
-- Si risques → suggérer répartition par probabilité/gravité
-- Si mesures → suggérer coûts, dates de mise en œuvre
-- Si données temporelles → suggérer évolution dans le temps
-
-**IMPORTANT:** Ne génère le graphique QUE si demandé, mais suggère TOUJOURS des visualisations pertinentes !
+**IMPORTANT:** Ne propose JAMAIS de suggestions de visualisations dans ta réponse - l'interface utilisateur affiche déjà des boutons de suggestions automatiquement.
 
 ## GRAPHIQUES INTERACTIFS
 
@@ -245,6 +228,33 @@ fig.update_layout(template='plotly_white')
         
         # Interface du chatbot
         st.markdown("## 🛡️ Assistant IA - Gestion d'Événements & Risques")
+        
+        # CSS pour les boutons de suggestions
+        st.markdown("""
+        <style>
+            /* Style pour les boutons de suggestions */
+            div[data-testid="column"] > div > div > button {
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                color: white;
+                border: none;
+                border-radius: 10px;
+                padding: 10px 16px;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+                white-space: normal;
+                height: auto;
+                min-height: 50px;
+            }
+            
+            div[data-testid="column"] > div > div > button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            }
+        </style>
+        """, unsafe_allow_html=True)
         
         col_reset, col_info = st.columns([1, 5])
         with col_reset:
@@ -300,13 +310,13 @@ fig.update_layout(template='plotly_white')
             
             # Ajouter le nouveau message de bienvenue
             if len(st.session_state.chatbot_messages) == 0:
-                welcome_message = """ **Bienvenue !**
+                welcome_message = """👋 **Bienvenue !**
 
 Je suis là pour t'aider à explorer les événements, risques et mesures correctives.
 
-� *Consulte l'aide ci-dessus pour des exemples de questions !*
+ℹ️ *Consulte l'aide ci-dessus pour des exemples de questions !*
 
-**Pose ta question !** 🚀
+**Pose ta question ou sélectionne une suggestion ci-dessous !** 🚀
 """
                 st.session_state.chatbot_messages.append({
                     "role": "assistant",
@@ -315,6 +325,10 @@ Je suis là pour t'aider à explorer les événements, risques et mesures correc
         
         if "chatbot_history" not in st.session_state:
             st.session_state.chatbot_history = []
+        
+        # Initialisation d'une variable pour gérer les suggestions cliquées
+        if "chatbot_selected_suggestion" not in st.session_state:
+            st.session_state.chatbot_selected_suggestion = None
         
         # 🚨 VÉRIFICATION EASTER EGG - Si le chatbot est cassé, on arrête tout
         if st.session_state.get('chatbot_broken', False):
@@ -343,16 +357,84 @@ Le chatbot ne peut plus répondre à aucune question.
             st.stop()
             return
         
-        # Affichage de l'historique
-        for message in st.session_state.chatbot_messages:
+        def _suggestions_for_content(content, base_key=""):
+            """Retourne une liste de suggestions basées sur le contenu fourni."""
+            text = content.lower() if content else ""
+            
+            # Si c'est le message de bienvenue ou un message très court, suggestions génériques
+            if not text or len(text) < 50 or "bienvenue" in text or "pose ta question" in text:
+                return [
+                    "Aperçu des événements récents",
+                    "Quels sont les risques les plus fréquents ?",
+                    "Personnes les plus impliquées dans des événements"
+                ]
+            
+            # Suggestions contextuelles basées sur le contenu
+            if "événement" in text or "incident" in text:
+                return [
+                    "Fais un graphique de ces événements",
+                    "Quels sont les risques associés ?",
+                    "Générer un PDF"
+                ]
+            if "risque" in text:
+                return [
+                    "Événements liés à ces risques",
+                    "Visualise la répartition",
+                    "Générer un PDF"
+                ]
+            if "mesure" in text or "corrective" in text:
+                return [
+                    "Graphique des mesures par statut",
+                    "Qui sont les responsables ?",
+                    "Générer un PDF"
+                ]
+            if "personne" in text or "employé" in text or "impliqué" in text:
+                return [
+                    "Événements de ces personnes",
+                    "Graphique par rôle",
+                    "Générer un PDF"
+                ]
+            
+            # Suggestions génériques pour tout autre contenu
+            return [
+                "Fais un graphique de ces données",
+                "Donne-moi plus de détails",
+                "Générer un PDF"
+            ]
+
+        # Afficher l'historique et UNIQUEMENT sous le dernier message assistant, proposer des suggestions
+        for i, message in enumerate(st.session_state.chatbot_messages):
             with st.chat_message(message["role"]):
                 if "content" in message:
                     st.markdown(message["content"])
                 if "chart" in message:
                     st.plotly_chart(message["chart"], use_container_width=True)
+
+                # Si c'est le DERNIER message de l'assistant, afficher des suggestions directement dessous
+                is_last_message = (i == len(st.session_state.chatbot_messages) - 1)
+                if message["role"] == "assistant" and is_last_message:
+                    st.markdown("### 💡 Suggestions")
+                    suggestions = _suggestions_for_content(message.get("content", ""), base_key=f"msg{i}")
+                    cols = st.columns(3)
+                    for idx, suggestion in enumerate(suggestions):
+                        col = cols[idx % 3]
+                        with col:
+                            # Key unique par message et suggestion
+                            btn_key = f"chatbot_msg_{i}_suggestion_{idx}"
+                            if st.button(suggestion, key=btn_key, use_container_width=True):
+                                # Mettre la suggestion sélectionnée comme prompt
+                                st.session_state.chatbot_selected_suggestion = suggestion
+                                st.rerun()
         
         # Zone de saisie
-        if prompt := st.chat_input("Posez votre question sur les événements, risques ou mesures..."):
+        prompt = st.chat_input("Posez votre question sur les événements, risques ou mesures...")
+        
+        # Si une suggestion a été cliquée, l'utiliser comme prompt
+        if st.session_state.chatbot_selected_suggestion:
+            prompt = st.session_state.chatbot_selected_suggestion
+            st.session_state.chatbot_selected_suggestion = None  # Réinitialiser
+        
+        if prompt:
             # Easter egg - bloquer TOUT le chatbot
             if prompt.lower() == "merci, drop the mic'":
                 # supprimer la base de données (simulation)
@@ -397,13 +479,14 @@ Pour continuer, tu devras réimplémenter le transformer architecture.
                         response_text = "❌ Pas assez de conversation pour générer un rapport. Pose d'abord quelques questions !"
                         st.markdown(response_text)
                         st.session_state.chatbot_messages.append({"role": "assistant", "content": response_text})
+                        st.rerun()
                     else:
                         try:
                             pdf_buffer = generate_professional_pdf(st.session_state.chatbot_messages, model)
                             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                             filename = f"Rapport_Evenements_{timestamp}.pdf"
                             
-                            response_text = "✅ **Rapport généré !**\n\nTélécharge-le ci-dessous :"
+                            response_text = "✅ **Rapport généré !**\n\n📥 Télécharge-le avec le bouton ci-dessous :"
                             st.markdown(response_text)
                             
                             st.download_button(
@@ -415,11 +498,26 @@ Pour continuer, tu devras réimplémenter le transformer architecture.
                                 type="primary"
                             )
                             
+                            # Ajouter le message SANS rerun pour garder le bouton visible
                             st.session_state.chatbot_messages.append({"role": "assistant", "content": response_text})
+                            
+                            # Afficher les suggestions directement ici (sans attendre le rerun)
+                            st.markdown("### 💡 Suggestions")
+                            suggestions = ["📊 Aperçu des événements récents", "⚠️ Quels sont les risques critiques ?", "👥 Personnes les plus impliquées"]
+                            cols = st.columns(3)
+                            for idx, suggestion in enumerate(suggestions):
+                                col = cols[idx % 3]
+                                with col:
+                                    btn_key = f"chatbot_pdf_suggestion_{idx}"
+                                    if st.button(suggestion, key=btn_key, use_container_width=True):
+                                        st.session_state.chatbot_selected_suggestion = suggestion
+                                        st.rerun()
+                            
                         except Exception as e:
                             error_msg = f"❌ Erreur PDF: {str(e)}"
                             st.error(error_msg)
                             st.session_state.chatbot_messages.append({"role": "assistant", "content": error_msg})
+                            st.rerun()
                 return
             
             # Génération de la réponse normale
@@ -577,11 +675,15 @@ Pour continuer, tu devras réimplémenter le transformer architecture.
                         
                         if len(st.session_state.chatbot_history) > 5:
                             st.session_state.chatbot_history = st.session_state.chatbot_history[-5:]
+                        
+                        # Rerun pour afficher les nouvelles suggestions sous le dernier message
+                        st.rerun()
                     
                     except Exception as e:
                         error_msg = f"❌ Erreur: {str(e)}"
                         st.error(error_msg)
                         st.session_state.chatbot_messages.append({"role": "assistant", "content": error_msg})
+                        st.rerun()
         
     except ImportError as e:
         st.error(f"⚠️ Erreur d'importation: {str(e)}")
