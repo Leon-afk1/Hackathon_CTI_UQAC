@@ -6,6 +6,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from chatbot_integration import render_chatbot
 
 # Configuration de la page
 st.set_page_config(
@@ -521,7 +522,7 @@ with st.spinner("🔄 Chargement du dashboard..."):
 # === TABS POUR ORGANISATION DU CONTENU ===
 st.markdown("<br>", unsafe_allow_html=True)
 
-tab1, tab2, tab0, tab3, tab4 = st.tabs(["Vue d'ensemble", "Événements récents", "Statistiques", "Analyses détaillées", "Créateur de graphiques"])
+tab1, tab2, tab0, tab3, tab4, tab5 = st.tabs(["Vue d'ensemble", "Événements récents", "Statistiques", "Analyses détaillées", "Créateur de graphiques", "Assistant IA"])
 
 with tab0:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -1582,6 +1583,9 @@ with tab4:
     #             st.error(f"Erreur: {str(e)}")
     # else:
     #     st.warning("Aucune donnée disponible pour cette table")
+
+with tab5:
+    render_chatbot()
 
 # Footer
 st.markdown("<br><br>", unsafe_allow_html=True)
