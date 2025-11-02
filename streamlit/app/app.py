@@ -635,12 +635,12 @@ elif page == "📊 Statistiques":
     
     with col1:
         st.subheader("Événements par période")
-        if not df_events.empty and 'extracted_date' in df_events.columns:
+        if not df_events.empty and 'start_datetime' in df_events.columns:
             df_temp = df_events.copy()
-            df_temp['extracted_date'] = pd.to_datetime(df_temp['extracted_date'], errors='coerce')
-            df_temp = df_temp[df_temp['extracted_date'].notna()]
+            df_temp['start_datetime'] = pd.to_datetime(df_temp['start_datetime'], errors='coerce')
+            df_temp = df_temp[df_temp['start_datetime'].notna()]
             if len(df_temp) > 0:
-                df_temp['month'] = df_temp['extracted_date'].dt.to_period('M').astype(str)
+                df_temp['month'] = df_temp['start_datetime'].dt.to_period('M').astype(str)
                 monthly = df_temp.groupby('month').size()
                 st.metric("Moyenne mensuelle", f"{monthly.mean():.0f}", f"Max: {monthly.max()}")
     
@@ -784,10 +784,10 @@ elif page == "📅 Événements récents":
         if 'event_page' not in st.session_state:
             st.session_state.event_page = 0
     
-    if not df_events.empty and 'extracted_date' in df_events.columns:
+    if not df_events.empty and 'start_datetime' in df_events.columns:
         df_recent = df_events.copy()
-        df_recent['extracted_date'] = pd.to_datetime(df_recent['extracted_date'], errors='coerce')
-        df_recent = df_recent.sort_values('extracted_date', ascending=False)
+        df_recent['start_datetime'] = pd.to_datetime(df_recent['start_datetime'], errors='coerce')
+        df_recent = df_recent.sort_values('start_datetime', ascending=False)
         
         # Filtrer par type si sélectionné
         if selected_type != 'Tous':
@@ -831,10 +831,11 @@ elif page == "📅 Événements récents":
                         icon = '[✓]'
                     
                     event_type = event.get('type', 'N/A')
-                    event_date = event.get('extracted_date')
+                    event_date = event.get('start_datetime')
                     if pd.notna(event_date):
-                        event_date = pd.to_datetime(event_date).strftime('%d/%m/%Y %H:%M')
-                        event_date_short = pd.to_datetime(event_date, format='%d/%m/%Y %H:%M').strftime('%d/%m')
+                        event_date_parsed = pd.to_datetime(event_date)
+                        event_date = event_date_parsed.strftime('%d/%m/%Y %H:%M')
+                        event_date_short = event_date_parsed.strftime('%d/%m')
                     else:
                         event_date = 'N/A'
                         event_date_short = 'N/A'
@@ -937,16 +938,16 @@ elif page == "🔍 Analyses détaillées":
                 st.dataframe(unit_analysis, use_container_width=True, height=400)
     
     with analysis_tab2:
-        if not df_events.empty and 'extracted_date' in df_events.columns:
+        if not df_events.empty and 'start_datetime' in df_events.columns:
             st.markdown("#### Évolution temporelle des événements")
             
             df_temp = df_events.copy()
-            df_temp['extracted_date'] = pd.to_datetime(df_temp['extracted_date'], errors='coerce')
-            df_temp = df_temp[df_temp['extracted_date'].notna()]
+            df_temp['start_datetime'] = pd.to_datetime(df_temp['start_datetime'], errors='coerce')
+            df_temp = df_temp[df_temp['start_datetime'].notna()]
             
             if len(df_temp) > 0:
                 # Grouper par mois
-                df_temp['month'] = df_temp['extracted_date'].dt.to_period('M').astype(str)
+                df_temp['month'] = df_temp['start_datetime'].dt.to_period('M').astype(str)
                 monthly_counts = df_temp.groupby('month').size().reset_index(name='Nombre')
                 
                 fig = px.line(monthly_counts, x='month', y='Nombre',
@@ -966,8 +967,8 @@ elif page == "🔍 Analyses détaillées":
                 st.plotly_chart(fig, use_container_width=True)
                 
                 # Heatmap par jour de la semaine et semaine
-                df_temp['day_of_week'] = df_temp['extracted_date'].dt.day_name()
-                df_temp['week'] = df_temp['extracted_date'].dt.isocalendar().week
+                df_temp['day_of_week'] = df_temp['start_datetime'].dt.day_name()
+                df_temp['week'] = df_temp['start_datetime'].dt.isocalendar().week
                 
                 st.markdown("**Répartition par jour de la semaine**")
                 
@@ -1082,14 +1083,10 @@ elif page == "🎨 Créateur de graphiques":
         # Identifier et convertir les colonnes de dates
         date_columns = []
         for col in df_custom.columns:
-            if col in ['extracted_date', 'start_datetime', 'end_datetime', 'creation_date', 'update_date', 'date', 'datetime']:
+            if col in ['start_datetime', 'end_datetime', 'creation_date', 'update_date', 'date', 'datetime', 'implementation_date']:
                 # Convertir en datetime et garder le type datetime
                 df_custom[col] = pd.to_datetime(df_custom[col], errors='coerce')
                 date_columns.append(col)
-        
-        # Extraire le jour de la semaine depuis extracted_date
-        if 'extracted_date' in df_custom.columns:
-            df_custom['extracted_weekday'] = df_custom['extracted_date'].dt.day_name()
         
         # Extraire le jour de la semaine depuis start_datetime et end_datetime
         if 'start_datetime' in df_custom.columns:
@@ -1097,11 +1094,6 @@ elif page == "🎨 Créateur de graphiques":
         
         if 'end_datetime' in df_custom.columns:
             df_custom['end_weekday'] = df_custom['end_datetime'].dt.day_name()
-        
-        # Nettoyer extracted_shift
-        if 'extracted_shift' in df_custom.columns:
-            df_custom['extracted_shift'] = df_custom['extracted_shift'].str.strip().str.lower()
-            df_custom.loc[~df_custom['extracted_shift'].isin(['day', 'night']), 'extracted_shift'] = None
         
         st.info(f"Utilisation de {len(df_custom):,} éléments de la table '{source_endpoint}'")
     

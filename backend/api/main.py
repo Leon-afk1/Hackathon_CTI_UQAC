@@ -2,7 +2,6 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
-import re
 from datetime import datetime
 
 import models, schemas
@@ -18,98 +17,20 @@ def get_db():
     finally:
         db.close()
 
-# Fonction pour extraire les informations de la description
-def extract_event_info(description: str) -> dict:
-    """
-    Extrait la date, l'heure et le shift de la description de l'événement.
-    Format attendu: "On {DATE}, at approximately {TIME} during {SHIFT} shift operations"
-    """
-    extracted = {
-        "date": None,
-        "time": None,
-        "shift": None
-    }
-    
-    # Pattern pour extraire la date (ex: "April 2, 2024", "December 14, 2023")
-    date_pattern = r"On ([A-Za-z]+ \d{1,2}, \d{4})"
-    date_match = re.search(date_pattern, description)
-    if date_match:
-        extracted["date"] = date_match.group(1)
-    
-    # Pattern pour extraire l'heure (ex: "9:45 PM", "2:30 AM", "14:00")
-    time_pattern = r"at approximately (\d{1,2}:\d{2}(?:\s?[AP]M)?)"
-    time_match = re.search(time_pattern, description, re.IGNORECASE)
-    if time_match:
-        extracted["time"] = time_match.group(1)
-    
-    # Pattern pour extraire le shift (ex: "evening shift", "morning shift", "night shift", "day shift", "during evening shift operations")
-    shift_pattern = r"(?:during |the )(\w+) shift"
-    shift_match = re.search(shift_pattern, description, re.IGNORECASE)
-    if shift_match:
-        extracted["shift"] = shift_match.group(1)
-    
-    return extracted
-
 # === ENDPOINTS POUR LES EVENTS ===
-@app.get("/events/", response_model=List[schemas.EventEnriched])
+@app.get("/events/", response_model=List[schemas.Event])
 def read_events(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Récupère une liste d'événements avec informations extraites."""
+    """Récupère une liste d'événements."""
     events = db.query(models.Event).offset(skip).limit(limit).all()
-    
-    # Enrichir chaque événement avec les informations extraites
-    enriched_events = []
-    for event in events:
-        event_dict = {
-            "event_id": event.event_id,
-            "declared_by_id": event.declared_by_id,
-            "description": event.description,
-            "start_datetime": event.start_datetime,
-            "end_datetime": event.end_datetime,
-            "organizational_unit_id": event.organizational_unit_id,
-            "type": event.type,
-            "classification": event.classification,
-        }
-        
-        # Extraire les informations de la description
-        extracted = extract_event_info(event.description)
-        event_dict.update({
-            "extracted_date": extracted["date"],
-            "extracted_time": extracted["time"],
-            "extracted_shift": extracted["shift"]
-        })
-        
-        enriched_events.append(event_dict)
-    
-    return enriched_events
+    return events
 
-@app.get("/events/{event_id}", response_model=schemas.EventEnriched)
+@app.get("/events/{event_id}", response_model=schemas.Event)
 def read_event(event_id: int, db: Session = Depends(get_db)):
-    """Récupère un événement par son identifiant avec informations extraites."""
+    """Récupère un événement par son identifiant."""
     event = db.query(models.Event).filter(models.Event.event_id == event_id).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Événement non trouvé")
-    
-    # Créer un dictionnaire avec les données de l'événement
-    event_dict = {
-        "event_id": event.event_id,
-        "declared_by_id": event.declared_by_id,
-        "description": event.description,
-        "start_datetime": event.start_datetime,
-        "end_datetime": event.end_datetime,
-        "organizational_unit_id": event.organizational_unit_id,
-        "type": event.type,
-        "classification": event.classification,
-    }
-    
-    # Extraire les informations de la description
-    extracted = extract_event_info(event.description)
-    event_dict.update({
-        "extracted_date": extracted["date"],
-        "extracted_time": extracted["time"],
-        "extracted_shift": extracted["shift"]
-    })
-    
-    return event_dict
+    return event
 
 @app.post("/events/", response_model=schemas.Event, status_code=201)
 def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
