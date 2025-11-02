@@ -1043,6 +1043,9 @@ elif page == "🎨 Créateur de graphiques":
     st.markdown("---")
     st.subheader("Créateur de graphiques personnalisés")
     
+    # Initialiser date_columns
+    date_columns = []
+    
     # Sélecteur de table source
     st.markdown("**Sélectionner la source des données**")
     source_endpoint = st.selectbox(
@@ -1076,22 +1079,24 @@ elif page == "🎨 Créateur de graphiques":
                 lambda x: persons_map.get(x, f"Person {x}") if pd.notna(x) else None
             )
         
+        # Identifier et convertir les colonnes de dates
+        date_columns = []
+        for col in df_custom.columns:
+            if col in ['extracted_date', 'start_datetime', 'end_datetime', 'creation_date', 'update_date', 'date', 'datetime']:
+                # Convertir en datetime et garder le type datetime
+                df_custom[col] = pd.to_datetime(df_custom[col], errors='coerce')
+                date_columns.append(col)
+        
         # Extraire le jour de la semaine depuis extracted_date
         if 'extracted_date' in df_custom.columns:
-            df_custom['extracted_date_temp'] = pd.to_datetime(df_custom['extracted_date'], errors='coerce')
-            df_custom['extracted_weekday'] = df_custom['extracted_date_temp'].dt.day_name()
-            df_custom = df_custom.drop('extracted_date_temp', axis=1)
+            df_custom['extracted_weekday'] = df_custom['extracted_date'].dt.day_name()
         
         # Extraire le jour de la semaine depuis start_datetime et end_datetime
         if 'start_datetime' in df_custom.columns:
-            df_custom['start_datetime_temp'] = pd.to_datetime(df_custom['start_datetime'], errors='coerce')
-            df_custom['start_weekday'] = df_custom['start_datetime_temp'].dt.day_name()
-            df_custom = df_custom.drop('start_datetime_temp', axis=1)
+            df_custom['start_weekday'] = df_custom['start_datetime'].dt.day_name()
         
         if 'end_datetime' in df_custom.columns:
-            df_custom['end_datetime_temp'] = pd.to_datetime(df_custom['end_datetime'], errors='coerce')
-            df_custom['end_weekday'] = df_custom['end_datetime_temp'].dt.day_name()
-            df_custom = df_custom.drop('end_datetime_temp', axis=1)
+            df_custom['end_weekday'] = df_custom['end_datetime'].dt.day_name()
         
         # Nettoyer extracted_shift
         if 'extracted_shift' in df_custom.columns:
@@ -1321,6 +1326,13 @@ elif page == "🎨 Créateur de graphiques":
                 st.error("❌ Pas assez de données (minimum 2 lignes)")
                 st.stop()
             
+            # Détecter si x_axis est une colonne de date et la trier
+            is_x_date = False
+            if x_axis and x_axis in date_columns:
+                is_x_date = True
+                df_plot = df_plot.sort_values(by=x_axis)
+                st.info(f"📅 Colonne de date détectée: tri chronologique appliqué sur {x_axis}")
+            
             # Créer le graphique selon le type
             if chart_type == "Bar Chart":
                 # Nettoyer les données
@@ -1331,7 +1343,8 @@ elif page == "🎨 Créateur de graphiques":
                     st.stop()
                 
                 # Limiter le nombre de catégories pour éviter les graphiques surchargés
-                if df_plot[x_axis].nunique() > 50:
+                # Mais seulement si ce n'est pas une date
+                if not is_x_date and df_plot[x_axis].nunique() > 50:
                     st.warning(f"⚠️ Trop de catégories ({df_plot[x_axis].nunique()}). Affichage des 30 premières.")
                     top_categories = df_plot[x_axis].value_counts().head(30).index
                     df_plot = df_plot[df_plot[x_axis].isin(top_categories)]
@@ -1352,6 +1365,10 @@ elif page == "🎨 Créateur de graphiques":
                         df_plot = df_plot.groupby(group_cols)[y_axis].min().reset_index()
                     elif aggregation == "Max":
                         df_plot = df_plot.groupby(group_cols)[y_axis].max().reset_index()
+                    
+                    # Re-trier par date après l'agrégation si nécessaire
+                    if is_x_date:
+                        df_plot = df_plot.sort_values(by=x_axis)
                 
                 # Déterminer le label de l'axe Y
                 y_label = f"{aggregation} {y_axis}" if aggregation != "Aucune" else y_axis
@@ -1359,6 +1376,10 @@ elif page == "🎨 Créateur de graphiques":
                 fig = px.bar(df_plot, x=x_axis, y=y_axis, color=color_column, 
                             title=chart_title, height=chart_height,
                             labels={y_axis: y_label})
+                
+                # Si c'est une date, formater l'axe X
+                if is_x_date:
+                    fig.update_xaxes(tickformat="%Y-%m-%d", tickangle=-45)
                 
                 # Personnaliser le hover template
                 if aggregation != "Aucune":
@@ -1388,6 +1409,10 @@ elif page == "🎨 Créateur de graphiques":
                         df_plot = df_plot.groupby(group_cols)[y_axis].mean().reset_index()
                     elif aggregation == "Nombre de":
                         df_plot = df_plot.groupby(group_cols).size().reset_index(name=y_axis)
+                    
+                    # Re-trier par date après l'agrégation si nécessaire
+                    if is_x_date:
+                        df_plot = df_plot.sort_values(by=x_axis)
                 
                 # Déterminer le label de l'axe Y
                 y_label = f"{aggregation} {y_axis}" if aggregation != "Aucune" else y_axis
@@ -1395,6 +1420,10 @@ elif page == "🎨 Créateur de graphiques":
                 fig = px.line(df_plot, x=x_axis, y=y_axis, color=color_column,
                                 title=chart_title, height=chart_height,
                                 labels={y_axis: y_label})
+                
+                # Si c'est une date, formater l'axe X
+                if is_x_date:
+                    fig.update_xaxes(tickformat="%Y-%m-%d", tickangle=-45)
                 
                 # Personnaliser le hover template
                 if aggregation != "Aucune":
