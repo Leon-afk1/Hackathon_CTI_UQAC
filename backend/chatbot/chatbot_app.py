@@ -64,6 +64,46 @@ st.markdown("""
         transform: scale(1.1);
         box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
     }
+    
+    /* Style pour les boutons de suggestions */
+    .stButton button[kind="primary"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 20px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .stButton button[kind="primary"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+    
+    /* Style alternatif pour suggestions de base */
+    div[data-testid="column"] > div > div > button {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
+        white-space: normal;
+        height: auto;
+        min-height: 50px;
+    }
+    
+    div[data-testid="column"] > div > div > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -422,13 +462,7 @@ Je réponds rapidement à vos questions sur:
 - ✅ Mesures correctives
 - 👥 Personnes impliquées
 
-**Exemples:**
-- "Événements récents"
-- "Risques critiques"
-- "Graphique des événements par mois"
-- "Visualise la répartition des types"
-
-**Pose ta question !** 🚀
+**Pose ta question ou sélectionne une suggestion ci-dessous !** 🚀
 """
     st.session_state.messages.append({
         "role": "assistant",
@@ -438,6 +472,10 @@ Je réponds rapidement à vos questions sur:
 # Initialisation de l'historique de conversation (pour mémoire SQL)
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
+
+# Initialisation d'une variable pour gérer les suggestions cliquées
+if "selected_suggestion" not in st.session_state:
+    st.session_state.selected_suggestion = None
 
 # Affichage de l'historique des messages
 for message in st.session_state.messages:
@@ -450,8 +488,77 @@ for message in st.session_state.messages:
         if "chart" in message:
             st.plotly_chart(message["chart"], use_container_width=True)
 
+# ========= SUGGESTIONS DE QUESTIONS (au début ou après réponse) =========
+def show_question_suggestions():
+    """Affiche des boutons de suggestions de questions"""
+    
+    # Suggestions selon le contexte
+    if len(st.session_state.messages) <= 1:
+        # Suggestions initiales (au démarrage)
+        suggestions = [
+            "📊 Donne-moi un aperçu des événements récents",
+            "⚠️ Quels sont les risques les plus critiques ?",
+            "📈 Fais un graphique des événements par type",
+            "👥 Liste les personnes les plus impliquées",
+            "📅 Visualise l'évolution des événements par mois",
+            "🏢 Quelles sont les unités avec le plus d'incidents ?"
+        ]
+        st.markdown("### 💡 Questions suggérées")
+    else:
+        # Suggestions basées sur la dernière question
+        last_message = st.session_state.messages[-1].get("content", "")
+        
+        # Déterminer le contexte
+        if "événement" in last_message.lower() or "incident" in last_message.lower():
+            suggestions = [
+                "📊 Fais un graphique de ces événements",
+                "⚠️ Quels sont les risques associés ?",
+                "✅ Quelles mesures correctives ont été prises ?",
+                "👥 Qui sont les personnes impliquées ?"
+            ]
+        elif "risque" in last_message.lower():
+            suggestions = [
+                "📋 Liste les événements liés à ces risques",
+                "📈 Visualise la répartition de ces risques",
+                "🏢 Quelles unités sont les plus concernées ?"
+            ]
+        elif "mesure" in last_message.lower() or "corrective" in last_message.lower():
+            suggestions = [
+                "📊 Fais un graphique des mesures par statut",
+                "📋 Liste les événements concernés",
+                "👥 Qui sont les responsables ?"
+            ]
+        else:
+            suggestions = [
+                "📊 Fais un graphique de ces données",
+                "📋 Donne-moi plus de détails",
+                "📈 Montre-moi l'évolution dans le temps",
+                "🔍 Analyse plus approfondie"
+            ]
+        
+        st.markdown("### 💡 Questions de suivi suggérées")
+    
+    # Créer une grille de boutons (3 colonnes)
+    cols = st.columns(3)
+    for idx, suggestion in enumerate(suggestions):
+        col = cols[idx % 3]
+        with col:
+            if st.button(suggestion, key=f"suggestion_{idx}", use_container_width=True):
+                st.session_state.selected_suggestion = suggestion
+                st.rerun()
+
+# Afficher les suggestions avant la zone de saisie
+show_question_suggestions()
+
 # Zone de saisie utilisateur
-if prompt := st.chat_input("Posez votre question sur les événements, risques ou mesures..."):
+prompt = st.chat_input("Posez votre question sur les événements, risques ou mesures...")
+
+# Si une suggestion a été cliquée, l'utiliser comme prompt
+if st.session_state.selected_suggestion:
+    prompt = st.session_state.selected_suggestion
+    st.session_state.selected_suggestion = None  # Réinitialiser
+
+if prompt:
     # Ajout du message utilisateur
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
