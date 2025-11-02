@@ -239,6 +239,31 @@ fig.update_layout(template='plotly_white')
         with col_info:
             st.markdown(f"*Propulsé par {model_name}*")
         
+        # Section d'aide statique
+        with st.expander("ℹ️ Aide - Comment utiliser l'assistant", expanded=False):
+            st.markdown("""
+**Je réponds rapidement à vos questions sur:**
+- 📋 Événements & incidents
+- ⚠️ Risques  
+- ✅ Mesures correctives
+- 👥 Personnes impliquées
+
+**Exemples de questions:**
+- "Événements récents"
+- "Risques critiques"
+- "Graphique des événements par mois"
+- "Donne-moi les détails de l'événement 123"
+- "Liste les personnes impliquées dans les incidents"
+
+**À noter**
+- Pour obtenir un graphique, précisez que vous en voulez un!
+
+**Fonctionnalités avancées:**
+- 📊 Génération de graphiques interactifs
+- 📄 Export PDF des conversations
+- 🗑️ Suppression d'enregistrements (avec confirmation)
+            """)
+        
         # Initialisation des sessions states
         if "chatbot_messages" not in st.session_state:
             st.session_state.chatbot_messages = []
@@ -256,16 +281,9 @@ fig.update_layout(template='plotly_white')
             if len(st.session_state.chatbot_messages) == 0:
                 welcome_message = """👋 **Bienvenue !**
 
-Je réponds rapidement à vos questions sur:
-- 📋 Événements & incidents
-- ⚠️ Risques  
-- ✅ Mesures correctives
-- 👥 Personnes impliquées
+Je suis là pour t'aider à explorer les événements, risques et mesures correctives.
 
-**Exemples:**
-- "Événements récents"
-- "Risques critiques"
-- "Graphique des événements par mois"
+� *Consulte l'aide ci-dessus pour des exemples de questions !*
 
 **Pose ta question !** 🚀
 """
