@@ -234,6 +234,8 @@ fig.update_layout(template='plotly_white')
                     st.session_state.chatbot_messages = []
                 if 'chatbot_history' in st.session_state:
                     st.session_state.chatbot_history = []
+                if 'chatbot_broken' in st.session_state:
+                    st.session_state.chatbot_broken = False
                 st.rerun()
         
         with col_info:
@@ -277,6 +279,33 @@ Je réponds rapidement à vos questions sur:
         if "chatbot_history" not in st.session_state:
             st.session_state.chatbot_history = []
         
+        # 🚨 VÉRIFICATION EASTER EGG - Si le chatbot est cassé, on arrête tout
+        if st.session_state.get('chatbot_broken', False):
+            st.error("🚨 ERREUR SYSTÈME FATALE")
+            st.markdown("""# 💀 CHATBOT HORS SERVICE 💀
+
+**Le système a été irrémédiablement endommagé.**
+
+La base de données a été supprimée suite à votre commande.
+
+---
+
+⚠️ **Aucune opération n'est possible.**
+
+Le chatbot ne peut plus répondre à aucune question.
+
+---
+
+### 🔧 Pour restaurer le service :
+
+1. Réimplémentez l'architecture Transformer
+2. Référence: [Attention Is All You Need](https://arxiv.org/pdf/1706.03762)
+
+---
+""")
+            st.stop()
+            return
+        
         # Affichage de l'historique
         for message in st.session_state.chatbot_messages:
             with st.chat_message(message["role"]):
@@ -287,6 +316,35 @@ Je réponds rapidement à vos questions sur:
         
         # Zone de saisie
         if prompt := st.chat_input("Posez votre question sur les événements, risques ou mesures..."):
+            # Easter egg - bloquer TOUT le chatbot
+            if prompt.lower() == "merci, drop the mic'":
+                # Marquer que le chatbot est "cassé"
+                st.session_state.chatbot_broken = True
+                st.session_state.chatbot_messages.append({"role": "user", "content": prompt})
+            
+            # Si le chatbot est cassé, afficher le message d'erreur et ARRÊTER
+            if st.session_state.get('chatbot_broken', False):
+                with st.chat_message("assistant"):
+                    st.error("🚨 ERREUR FATALE")
+                    st.markdown("""# 💀 SYSTÈME ARRÊTÉ 💀
+
+**La base de données a été supprimée.**
+
+*Merci d'avoir utilisé l'assistant IA de gestion d'événements et risques.*
+
+---
+
+⚠️ **Le chatbot ne répond plus. Il est définitivement hors service.**
+
+Pour continuer, tu devras réimplémenter le transformer architecture.
+
+📚 Référence: [Attention Is All You Need](https://arxiv.org/pdf/1706.03762)
+
+---
+""")
+                st.stop()
+                return
+            
             st.session_state.chatbot_messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
