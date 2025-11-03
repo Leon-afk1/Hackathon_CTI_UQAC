@@ -8,29 +8,29 @@
 
 An intelligent conversational system combining a **RAG (Retrieval-Augmented Generation)** chatbot and an **interactive dashboard**. Query a PostgreSQL database using natural language, just like talking to an expert colleague — or explore your data visually.
 
-> 🏆 This project won **second place** and **$1000 CAD** at the hackathon, developed after more than **25 hours of continuous coding**.
+> This project won **second place** and **$1000 CAD** at the hackathon, developed after more than **25 hours of continuous coding**.
 
 ---
 
-## ✨ Main Features
+## Main Features
 
-- 🧠 **Automatic SQL Generation** — Ask your questions in natural language.  
-- 💬 **Conversational Interface** — Human-like tone, structured answers.  
-- 📊 **Interactive Dashboard** — A connected dashboard with pre-built graphs and the ability to customize your own charts.  
-- 🔍 **Total Transparency** — View the generated SQL and verifiable data.  
-- 🛡️ **Robust Security** — Anti-SQL injection, automatic validation.  
-- 🚀 **Simple Deployment** — All-in-one Docker setup.  
+- **Automatic SQL Generation** — Ask your questions in natural language.  
+- **Conversational Interface** — Human-like tone, structured answers.  
+- **Interactive Dashboard** — A connected dashboard with pre-built graphs and the ability to customize your own charts.  
+- **Total Transparency** — View the generated SQL and verifiable data.  
+- **Robust Security** — Anti-SQL injection, automatic validation.  
+- **Simple Deployment** — All-in-one Docker setup.  
 
 ---
 
-## 💬 Chatbot Preview
+## Chatbot Preview
 
 ![Aperçu du chatbot](photo/chatbot1.png)
 ![Chatbot affichant un graphique](photo/chatbot_graphique.png)
 
 ---
 
-## 📊 Dashboard & Visualization
+## Dashboard & Visualization
 
 ### Explore Data Visually
 
@@ -44,7 +44,7 @@ An intelligent conversational system combining a **RAG (Retrieval-Augmented Gene
 
 ---
 
-## 🧠 What You Can Do
+## What You Can Do
 
 ### Ask Natural Language Questions
 
@@ -59,22 +59,22 @@ The chatbot understands your question, automatically generates the appropriate S
 
 ---
 
-## 📂 PDF & Data Management
+## PDF & Data Management
 
 ![Aperçu de la génération de PDF](photo/generation_pdf.png)
 ![Aperçu de la gestion des données](photo/gestion_donnée.png)
 
 ---
 
-## 🚀 Quick Install (3 Steps)
+## Quick Install (3 Steps)
 
-### 🧩 Prerequisites
+### Prerequisites
 - **Docker** and **Docker Compose** installed → [Docker Desktop](https://www.docker.com/products/docker-desktop)  
 - **Google Gemini API Key** → [Get one here](https://makersuite.google.com/app/apikey)
 
 ---
 
-### ⚙️ Steps
+### Steps
 
 #### 1️⃣ Configure the API Key
 ```bash
@@ -134,10 +134,10 @@ Open your browser to: **http://localhost:8501**
 Question → SQL Generator → PostgreSQL → Data Retriever → Gemini LLM → Answer
 ```
 
-1. **You ask a question in natural language.
-2. **Gemini generates SQL adapted to your question.
-3. **The system retrieves data from PostgreSQL.
-4. **Gemini analyzes and structures a clear response.
+1. **You ask a question in natural language.**
+2. **Gemini generates SQL adapted to your question.**
+3. **The system retrieves data from PostgreSQL.**
+4. **Gemini analyzes and structures a clear response.**
 5. **You receive a conversational answer** with tables and details.
 
 ### Total Transparency
