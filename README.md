@@ -1,219 +1,222 @@
-# 🛡️ Neuils-de-UTBM - Chatbot RAG Intelligent
+# 🛡️ Intelligent RAG Chatbot & Dashboard
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
 
-**Assistant Expert en Gestion d'Événements, Risques et Mesures Correctives**
+**Expert Assistant for Event, Risk, and Corrective Action Management**
 
-Un chatbot conversationnel intelligent utilisant RAG (Retrieval-Augmented Generation) pour interroger une base de données PostgreSQL de manière naturelle, comme si vous parliez à un collègue expert.
+An intelligent conversational system combining a **RAG (Retrieval-Augmented Generation)** chatbot and an **interactive dashboard**. Query a PostgreSQL database using natural language, just like talking to an expert colleague — or explore your data visually.
 
-## ✨ Fonctionnalités Principales
+> 🏆 This project won **second place** and **$1000 CAD** at the hackathon, developed after more than **25 hours of continuous coding**.
 
-- 🧠 **Génération Automatique de SQL** - Posez vos questions en langage naturel
-- 💬 **Interface Conversationnelle** - Ton humain, réponses structurées  
-- 🔍 **Transparence Totale** - SQL généré visible, données vérifiables
-- 🛡️ **Sécurité Robuste** - Anti-injection SQL, validation automatique
-- 📊 **Analyse Complète** - Événements, risques, mesures, personnes
-- 🚀 **Déploiement Simple** - Docker tout-en-un
+---
 
-## 🎯 Ce que Vous Pouvez Faire
+## ✨ Main Features
 
-### Poser des Questions en Langage Naturel
+- 🧠 **Automatic SQL Generation** — Ask your questions in natural language.  
+- 💬 **Conversational Interface** — Human-like tone, structured answers.  
+- 📊 **Interactive Dashboard** — A connected dashboard with pre-built graphs and the ability to customize your own charts.  
+- 🔍 **Total Transparency** — View the generated SQL and verifiable data.  
+- 🛡️ **Robust Security** — Anti-SQL injection, automatic validation.  
+- 🚀 **Simple Deployment** — All-in-one Docker setup.  
 
-```
-"Quels sont les événements récents ?"
-"Liste les risques de gravité élevée"
-"Qui sont les personnes impliquées dans l'événement 5 ?"
-"Quel est le coût total des mesures correctives ?"
-```
+---
 
-Le chatbot comprend votre question, génère automatiquement le SQL approprié et vous répond de manière claire et structurée.
+## 💬 Chatbot Preview
 
-## 🚀 Installation Rapide (3 Étapes)
+![Aperçu du chatbot](photo/chatbot1.png)
+![Chatbot affichant un graphique](photo/chatbot_graphique.png)
 
-### Prérequis
-- **Docker** et **Docker Compose** installés ([Docker Desktop](https://www.docker.com/products/docker-desktop/))
-- **Clé API Google Gemini** ([Obtenir ici](https://makersuite.google.com/app/apikey))
+---
 
-### Étapes
+## 📊 Dashboard & Visualization
 
-#### 1️⃣ Configuration de la Clé API
+### Explore Data Visually
+
+- Access the connected dashboard to view **pre-built analytics** on events, costs, and risks.  
+- Create and **customize your own graphs** to discover new insights.  
+
+![Graphique 1 du dashboard](photo/graphique_dashboard1.png)
+![Graphique 2 du dashboard](photo/graphique_dashboard2.png)
+![Graphique 3 du dashboard](photo/graphique_dashboard3.png)
+![Aperçu de la personnalisation des graphiques](photo/graphique_personnaliser.png)
+
+---
+
+## 🧠 What You Can Do
+
+### Ask Natural Language Questions
+
+Examples:
+- "What are the recent events?"
+- "List high-severity risks"
+- "Who are the people involved in event 5?"
+- "What is the total cost of corrective measures?"
+
+
+The chatbot understands your question, automatically generates the appropriate SQL, and provides a clear, structured answer.
+
+---
+
+## 📂 PDF & Data Management
+
+![Aperçu de la génération de PDF](photo/generation_pdf.png)
+![Aperçu de la gestion des données](photo/gestion_donnée.png)
+
+---
+
+## 🚀 Quick Install (3 Steps)
+
+### 🧩 Prerequisites
+- **Docker** and **Docker Compose** installed → [Docker Desktop](https://www.docker.com/products/docker-desktop)  
+- **Google Gemini API Key** → [Get one here](https://makersuite.google.com/app/apikey)
+
+---
+
+### ⚙️ Steps
+
+#### 1️⃣ Configure the API Key
 ```bash
 cd backend/app
 cp .env.example .env
-nano .env  # ou vim, code, etc.
+nano .env  # or vim, code, etc.
 ```
 
-Ajoutez votre clé API :
-```env
-GEMINI_API_KEY=votre_clé_api_ici
-```
+Add your API key to the `.env` file:
 
-#### 2️⃣ Démarrage des Services
-```bash
+GEMINI_API_KEY=your_api_key_here
+
+#### 2️⃣ Start the Services
+```
 cd ../..
 docker-compose up -d
 ```
 
-#### 3️⃣ Accès au Chatbot
-Ouvrez votre navigateur sur : **http://localhost:8501**
+#### 3️⃣ Access the App
 
-**C'est tout ! 🎉**
+Open your browser to: **http://localhost:8501**
 
-## 📊 Services Disponibles
+
+## Available Services
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **🤖 Chatbot** | http://localhost:8501 | Interface conversationnelle Streamlit |
-| **🔧 API** | http://localhost:8000 | Backend FastAPI REST |
-| **📖 API Docs** | http://localhost:8000/docs | Documentation Swagger interactive |
-| **💾 PostgreSQL** | localhost:5432 | Base de données |
+| **Chatbot** | http://localhost:8501 | Streamlit conversational & visual interface |
+| **API** | http://localhost:8000 | FastAPI REST backend |
+| **API Docs** | http://localhost:8000/docs | Interactive Swagger documentation |
+| **PostgreSQL** | localhost:5432 | Database |
 
-## 💡 Exemples de Questions
+## Example Questions
 
-### Questions Simples
-- "Quels sont les événements récents ?"
-- "Liste les risques identifiés"
-- "Combien d'événements sont enregistrés ?"
+### Simple Questions
+- "What are the recent events?"
+- "List the identified risks"
+- "How many events are recorded?"
 
-### Questions avec Relations (JOINs automatiques)
-- "Qui sont les personnes impliquées dans l'événement 5 ?"
-- "Quels événements ont des risques critiques associés ?"
-- "Liste les mesures correctives avec leur responsable"
+### Relational Questions (Automatic JOINs)
+- "Who are the people involved in event 5?"
+- "Which events have critical risks associated with them?"
+- "List the corrective measures with their owners"
 
-### Questions Analytiques
-- "Quel est le coût total des mesures correctives ?"
-- "Combien d'événements par type ?"
-- "Quelle unité a le plus d'événements ?"
 
-## 🧠 Comment ça Marche ?
+### Analytical Questions
+- "What is the total cost of corrective measures?"
+- "How many events per type?"
+- "Which unit has the most events?"
 
-### Architecture RAG Intelligente
+
+## How It Works
+
+### Intelligent RAG Architecture
 
 ```
-Question → SQL Generator → PostgreSQL → Data Retriever → Gemini LLM → Réponse
+Question → SQL Generator → PostgreSQL → Data Retriever → Gemini LLM → Answer
 ```
 
-1. **Vous posez une question** en langage naturel
-2. **Gemini génère du SQL** adapté à votre question
-3. **Le système récupère les données** de PostgreSQL
-4. **Gemini analyse et structure** une réponse claire
-5. **Vous recevez une réponse conversationnelle** avec tableaux et détails
+1. **You ask a question in natural language.
+2. **Gemini generates SQL adapted to your question.
+3. **The system retrieves data from PostgreSQL.
+4. **Gemini analyzes and structures a clear response.
+5. **You receive a conversational answer** with tables and details.
 
-### 🔍 Transparence Totale
+### Total Transparency
 
-À chaque réponse, vous pouvez :
-- ✅ Voir le SQL généré automatiquement
-- ✅ Consulter les données brutes récupérées
-- ✅ Comprendre la logique de la requête
+With every answer, you can:
+- See the automatically generated SQL
+- Consult the raw data retrieved
+- Understand the query's logic
 
-## 🛡️ Sécurité
+## Security
+- Automatic anti-SQL injection
+- Only SELECT queries allowed
+- Validation of all queries
+- Result limiting (max 50 rows)
 
-- ✅ Anti-injection SQL automatique
-- ✅ Seules les requêtes SELECT autorisées
-- ✅ Validation de toutes les requêtes
-- ✅ Limitation des résultats (max 50)
 
-## 📚 Documentation
+## Useful Docker Commands
 
-| Document | Description |
-|----------|-------------|
-| [QUICK_START.md](QUICK_START.md) | Guide de démarrage rapide |
-| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | Vue d'ensemble complète |
-| [INTELLIGENT_RAG_SYSTEM.md](INTELLIGENT_RAG_SYSTEM.md) | Architecture RAG détaillée |
-| [CONVERSATIONAL_UPDATE.md](CONVERSATIONAL_UPDATE.md) | Fonctionnalités conversationnelles |
-| [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) | Checklist de déploiement |
-| [CHATBOT_README.md](CHATBOT_README.md) | Documentation technique complète |
-
-## 🧪 Tests
-
-### Test Rapide du Système
-```bash
-./test_system.sh
-```
-
-### Tests Individuels
-```bash
-# Test complet du RAG + SQL
-docker exec -it rag_streamlit python /app/test_sql_rag.py
-
-# Test de la récupération de données
-docker exec -it rag_streamlit python /app/test_data_retriever.py
-```
-
-## ⚙️ Commandes Docker Utiles
-
--   **Pour démarrer l'environnement :**
+-   **Start the environment:**
     ```bash
     docker compose up
     ```
 
--   **Pour arrêter et supprimer les conteneurs :**
+-   **Stop and remove containers:**
     ```bash
     docker compose down
     ```
 
--   **Pour forcer une réinitialisation de la base de données :**
-    Si vous voulez que le script de restauration de la base de données s'exécute à nouveau, vous devez supprimer le volume de données. **Attention, cela efface toutes les données de la DB.**
+-   **Force a database reset:**
+    If you want the database restore script to run again, remove the data volume. **Warning: This erases all DB data.**
     ```bash
     docker compose down -v
     ```
 
--   **Pour voir les logs d'un service en particulier (très utile pour le débogage) :**
+-   **View logs for a specific service:**
     ```bash
-    # Pour voir les logs de la base de données
+    # Database logs
     docker compose logs -f rag_db
-
-    # Pour voir les logs du backend
+    
+    # Backend logs
     docker compose logs -f rag_backend
     ```
 
-## 📂 Structure du Projet
+## Project Structure
 
 neuils-de-utbm/
 ├── backend/
-│ ├── app/
-│ │ └── main.py # Le code de notre API FastAPI
-│ ├── requirements.txt # Les librairies Python
-│ └── Dockerfile # Les instructions pour construire le backend
+│   ├── app/
+│   │   └── main.py          # FastAPI backend
+│   ├── requirements.txt     # Python dependencies
+│   └── Dockerfile           # Backend Dockerfile
 │
 ├── db_backup/
-│ ├── 01-restore.sh # Le script qui restaure la sauvegarde
-│ └── events.backup # Le fichier de sauvegarde de la base de données
+│   ├── 02-restore.sh        # Script restoring backup
+│   └── events.backup        # Database backup file
 │
-├── docker-compose.yml # Le fichier qui orchestre tout
-└── README.md # Ce fichier
+├── docker-compose.yml       # Orchestration file
+└── README.md                # This file
 
-## 🎉 Conclusion
+## Conclusion
 
 **Neuils-de-UTBM** est votre assistant intelligent pour la gestion d'événements, risques et mesures correctives.
 
 ### Points Forts
-- ✅ **Interface conversationnelle** - Parlez naturellement
-- ✅ **SQL automatique** - Aucune compétence technique requise
-- ✅ **Transparence totale** - Comprenez chaque réponse
-- ✅ **Déploiement simple** - 3 étapes pour démarrer
-- ✅ **Documentation complète** - 10+ guides détaillés
+- **Conversational Interface** — Speak naturally
+- **Automatic SQL** — No technical skills required
+- **Interactive Dashboard** — Pre-built graphs and customization
+- **Total Transparency** — Understand every answer
+- **Simple Deployment** — 3 steps to get started
 
-### Démarrage Rapide
-1. Configurez `.env` avec votre clé Gemini API
-2. Lancez `docker-compose up -d`
-3. Ouvrez http://localhost:8501
-4. Posez vos questions !
+### Quick Start
+1️⃣ Configure `.env` with your Gemini API key   
+2️⃣ Run: `docker-compose up -d`   
+3️⃣ Open http://localhost:8501   
+4️⃣ Ask your questions!    
 
-**Prêt à l'emploi. Intelligent. Conversationnel.** 🚀
+**Ready to use. Intelligent. Conversational.** 
 
----
-
-## 📞 Support & Documentation
-
-Pour plus d'informations, consultez :
-- [Guide de Démarrage Rapide](QUICK_START.md)
-- [Vue d'Ensemble du Projet](PROJECT_OVERVIEW.md)
-- [Documentation Complète](CHATBOT_README.md)
 
 ---
 
-*Développé pour le Hackathon CiT 2025 - UTBM*
+*Developed for the Conformit X UQAC Hackathon 2025*
